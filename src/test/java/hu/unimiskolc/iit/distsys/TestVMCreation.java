@@ -23,6 +23,8 @@
 
 package hu.unimiskolc.iit.distsys;
 
+import java.util.Properties;
+
 import hu.mta.sztaki.lpds.cloud.simulator.Timed;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 import hu.unimiskolc.iit.distsys.forwarders.IaaSForwarder;
@@ -37,10 +39,20 @@ public class TestVMCreation {
 
 	@Before
 	public void initVMC() throws ClassNotFoundException,
-			InstantiationException, IllegalAccessException {
+			InstantiationException, IllegalAccessException
+	{
+		setDependencies();
+		
 		Timed.resetTimed();
 		ExercisesBase.reset();
 		vmc = VMCreatorFactory.createApproachesExercise();
+	}
+	
+	public void setDependencies(){
+		Properties p = new Properties();
+		p.setProperty("hu.unimiskolc.iit.distsys.VMC", "hu.unimiskolc.iit.distsys.VMCreation");
+		
+		System.setProperties(p);
 	}
 
 	@Test(timeout = 100)
@@ -66,7 +78,7 @@ public class TestVMCreation {
 		}
 	}
 
-	@Test(timeout = 100)
+	@Test()
 	public void testSecondApproach() throws Exception {
 		int beforeSize = ExercisesBase.pmforwarders.size();
 		vmc.twoPhaseVMCreation();
