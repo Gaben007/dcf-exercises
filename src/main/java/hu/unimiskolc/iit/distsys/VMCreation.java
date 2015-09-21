@@ -46,7 +46,16 @@ public class VMCreation implements VMCreationApproaches {
 
 	@Override
 	public void migratedVMCreation() throws Exception {
-		// TODO Auto-generated method stub
+		PhysicalMachine pm1 = ExercisesBase.getNewPhysicalMachine();
+		pm1.turnon();
+		Timed.simulateUntilLastEvent();
+		
+		PhysicalMachine pm2 = ExercisesBase.getNewPhysicalMachine();
+		pm2.turnon();
+		Timed.simulateUntilLastEvent();
+		
+		//createVMByDeploy(pm1, "Disk1");
+		createVMByDeploy(pm2, "Disk2");
 
 	}
 	

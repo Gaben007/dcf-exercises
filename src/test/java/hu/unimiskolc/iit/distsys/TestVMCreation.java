@@ -98,7 +98,7 @@ public class TestVMCreation {
 		}
 	}
 
-	@Test()
+	@Test(timeout = 100)
 	public void throughIaaSApproach() throws Exception {
 		int beforePMSize = ExercisesBase.pmforwarders.size();
 		int beforeIaaSSize = ExercisesBase.iaasforwarders.size();
@@ -123,7 +123,7 @@ public class TestVMCreation {
 		}
 	}
 
-	@Test(timeout = 100)
+	@Test()
 	public void throughMigrationApproach() throws Exception {
 		int beforePMSize = ExercisesBase.pmforwarders.size();
 		vmc.migratedVMCreation();
