@@ -78,7 +78,7 @@ public class TestVMCreation {
 		}
 	}
 
-	@Test()
+	@Test(timeout = 100)
 	public void testSecondApproach() throws Exception {
 		int beforeSize = ExercisesBase.pmforwarders.size();
 		vmc.twoPhaseVMCreation();
@@ -98,7 +98,7 @@ public class TestVMCreation {
 		}
 	}
 
-	@Test(timeout = 100)
+	@Test()
 	public void throughIaaSApproach() throws Exception {
 		int beforePMSize = ExercisesBase.pmforwarders.size();
 		int beforeIaaSSize = ExercisesBase.iaasforwarders.size();
