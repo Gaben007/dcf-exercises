@@ -41,22 +41,38 @@ public class VMCreation implements VMCreationApproaches {
 		Timed.simulateUntilLastEvent();
 		
 		createVMByIaaSRequest(pm, "Disk1");
-		//createVMByIaaSRequest(pm, "Disk1");
 	}
 
 	@Override
 	public void migratedVMCreation() throws Exception {
+		VirtualMachine sourceMachine = null;
+		
+		ConstantConstraints constraint = new ConstantConstraints(1, 3, 2);
+		VirtualAppliance va = new VirtualAppliance("Disk1", 1, 0);
+		
+		// PM1 management
 		PhysicalMachine pm1 = ExercisesBase.getNewPhysicalMachine();
+		pm1.localDisk.registerObject(va);
+		
 		pm1.turnon();
 		Timed.simulateUntilLastEvent();
 		
+		sourceMachine = pm1.requestVM(va, constraint, pm1.localDisk, 1)[0];
+		Timed.simulateUntilLastEvent();
+		
+		
+		// PM2 management
 		PhysicalMachine pm2 = ExercisesBase.getNewPhysicalMachine();
+		pm2.localDisk.registerObject(va);
+		
 		pm2.turnon();
 		Timed.simulateUntilLastEvent();
 		
-		//createVMByDeploy(pm1, "Disk1");
-		createVMByDeploy(pm2, "Disk2");
-
+		
+		// migration
+		pm2.allocateResources(constraint, true, PhysicalMachine.defaultAllocLen);
+		pm1.migrateVM(sourceMachine, pm2);
+		Timed.simulateUntilLastEvent();
 	}
 	
 	private void createVMByRequest(PhysicalMachine pm, String storageId) throws VMManagementException, NetworkException{
