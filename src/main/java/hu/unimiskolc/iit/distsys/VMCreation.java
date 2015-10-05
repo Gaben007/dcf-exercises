@@ -1,7 +1,5 @@
 package hu.unimiskolc.iit.distsys;
 
-import java.lang.reflect.InvocationTargetException;
-
 import hu.mta.sztaki.lpds.cloud.simulator.Timed;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.PhysicalMachine;
@@ -10,8 +8,8 @@ import hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.constraints.ConstantConstraints;
 import hu.mta.sztaki.lpds.cloud.simulator.io.NetworkNode.NetworkException;
-import hu.mta.sztaki.lpds.cloud.simulator.io.StorageObject;
 import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
+import hu.unimiskolc.iit.distsys.interfaces.VMCreationApproaches;
 
 public class VMCreation implements VMCreationApproaches {
 
@@ -75,14 +73,6 @@ public class VMCreation implements VMCreationApproaches {
 		Timed.simulateUntilLastEvent();
 	}
 	
-	@Override
-	public void indirect100VMCreation() throws Exception {
-		PhysicalMachine pm = ExercisesBase.getNewPhysicalMachine();
-		Timed.simulateUntilLastEvent();
-		
-		createVMByIaaSRequest(pm, "Disk1");
-	}
-	
 	
 	private void createVMByRequest(PhysicalMachine pm, String storageId) throws VMManagementException, NetworkException{
 		VirtualAppliance va = new VirtualAppliance(storageId, 1, 0);
@@ -118,10 +108,6 @@ public class VMCreation implements VMCreationApproaches {
 		iaas.registerHost(pm);
 		iaas.requestVM(va, constraint, pm.localDisk, 1);
 		Timed.simulateUntilLastEvent();
-	}
-	
-	private void getPhysicalMachines(){
-		
 	}
 }
 

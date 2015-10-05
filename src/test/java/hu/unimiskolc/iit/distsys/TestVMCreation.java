@@ -29,6 +29,7 @@ import hu.mta.sztaki.lpds.cloud.simulator.Timed;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 import hu.unimiskolc.iit.distsys.forwarders.IaaSForwarder;
 import hu.unimiskolc.iit.distsys.forwarders.PMForwarder;
+import hu.unimiskolc.iit.distsys.interfaces.VMCreationApproaches;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,17 +39,17 @@ public class TestVMCreation {
 	VMCreationApproaches vmc;
 
 	@Before
-	public void initVMC() throws ClassNotFoundException,
-			InstantiationException, IllegalAccessException
+	public void initVMC() throws Exception
 	{
 		setDependencies();
 		
 		Timed.resetTimed();
 		ExercisesBase.reset();
-		vmc = VMCreatorFactory.createApproachesExercise();
+		
+		vmc = TestCreatorFactory.createApproachesExercise();
 	}
 	
-	public void setDependencies(){
+	public void setDependencies() throws Exception {
 		Properties p = new Properties();
 		p.setProperty("hu.unimiskolc.iit.distsys.VMC", "hu.unimiskolc.iit.distsys.VMCreation");
 		
@@ -141,11 +142,6 @@ public class TestVMCreation {
 				"The VM on the second PM should arrive by migration",
 				stop.isAllocVMCalled() && !stop.isDeployVMCalled()
 						&& !stop.isReqVMCalled());
-	}
-	
-	@Test()
-	public void bigResourceTest(){
-		vmc.indirect100VMCreation();
 	}
 }
 

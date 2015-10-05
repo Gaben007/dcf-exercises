@@ -18,6 +18,16 @@
 			<artifactId>dissect-cf</artifactId>
 			<version>0.9.7-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>hu.mta.sztaki.lpds.cloud.simulator</groupId>
+			<artifactId>DistSysJavaHelpers</artifactId>
+			<version>1.0.2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>hu.mta.sztaki.lpds.cloud.simulator</groupId>
+			<artifactId>dissect-cf-examples</artifactId>
+			<version>1.0.2-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 	<inceptionYear>2015</inceptionYear>
 	<organization>

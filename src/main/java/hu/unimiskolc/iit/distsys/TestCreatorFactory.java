@@ -23,12 +23,25 @@
 
 package hu.unimiskolc.iit.distsys;
 
-public class VMCreatorFactory {
+import hu.unimiskolc.iit.distsys.interfaces.BasicJobScheduler;
+import hu.unimiskolc.iit.distsys.interfaces.FillInAllPMs;
+import hu.unimiskolc.iit.distsys.interfaces.VMCreationApproaches;
+
+public class TestCreatorFactory {
 	public static VMCreationApproaches createApproachesExercise()
-			throws ClassNotFoundException, InstantiationException,
-			IllegalAccessException {
-		return (VMCreationApproaches) Class.forName(
-				System.getProperty("hu.unimiskolc.iit.distsys.VMC"))
+			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		return (VMCreationApproaches) Class.forName(System.getProperty("hu.unimiskolc.iit.distsys.VMC")).newInstance();
+	}
+
+	public static BasicJobScheduler createARoundRobinScheduler()
+			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		return (BasicJobScheduler) Class.forName(System.getProperty("hu.unimiskolc.iit.distsys.RRJSched"))
+				.newInstance();
+	}
+
+	public static FillInAllPMs getPMFiller()
+			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		return (FillInAllPMs) Class.forName(System.getProperty("hu.unimiskolc.iit.distsys.PMFiller"))
 				.newInstance();
 	}
 }

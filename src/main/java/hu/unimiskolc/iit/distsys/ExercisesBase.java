@@ -34,6 +34,7 @@ import hu.mta.sztaki.lpds.cloud.simulator.iaas.vmscheduling.RoundRobinScheduler;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.vmscheduling.Scheduler;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.vmscheduling.SmallestFirstScheduler;
 import hu.mta.sztaki.lpds.cloud.simulator.io.Repository;
+import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
 import hu.mta.sztaki.lpds.cloud.simulator.util.PowerTransitionGenerator;
 import hu.mta.sztaki.lpds.cloud.simulator.util.SeedSyncer;
 import hu.unimiskolc.iit.distsys.forwarders.IaaSForwarder;
@@ -68,9 +69,8 @@ public class ExercisesBase {
 	public static final int minLatency = 100;
 	public static final int maxLatency = 100;
 	@SuppressWarnings("unchecked")
-	public static final Class<? extends Scheduler>[] vmSchClasses = new Class[] {
-			FirstFitScheduler.class, NonQueueingScheduler.class,
-			RandomScheduler.class, RoundRobinScheduler.class,
+	public static final Class<? extends Scheduler>[] vmSchClasses = new Class[] { FirstFitScheduler.class,
+			NonQueueingScheduler.class, RandomScheduler.class, RoundRobinScheduler.class,
 			SmallestFirstScheduler.class };
 	@SuppressWarnings("unchecked")
 	public static final Class<? extends PhysicalMachineController>[] pmContClasses = new Class[] {
@@ -78,12 +78,10 @@ public class ExercisesBase {
 	private static int nameID = 0;
 
 	private static ArrayList<PMForwarder> pmfs = new ArrayList<PMForwarder>();
-	public static List<PMForwarder> pmforwarders = Collections
-			.unmodifiableList(pmfs);
+	public static List<PMForwarder> pmforwarders = Collections.unmodifiableList(pmfs);
 
 	private static ArrayList<IaaSForwarder> ifs = new ArrayList<IaaSForwarder>();
-	public static List<IaaSForwarder> iaasforwarders = Collections
-			.unmodifiableList(ifs);
+	public static List<IaaSForwarder> iaasforwarders = Collections.unmodifiableList(ifs);
 
 	public static String genNewName(String prefix) {
 		String newName = prefix + "-" + nameID++;
@@ -91,37 +89,51 @@ public class ExercisesBase {
 		return newName;
 	}
 
+	public static Repository getNewRepository(final long multiplier) {
+		final long networkBW = RandomUtils.nextLong(multiplier * minPMInBW, multiplier * maxPMInBW);
+		return new Repository(RandomUtils.nextLong(multiplier * minDisk, multiplier * maxDisk), genNewName("PM"),
+				networkBW, networkBW, networkBW / 2, latencyMap);
+	}
+
 	public static PhysicalMachine getNewPhysicalMachine()
-			throws SecurityException, InstantiationException,
-			IllegalAccessException, NoSuchFieldException {
+			throws SecurityException, InstantiationException, IllegalAccessException, NoSuchFieldException {
 		double idlePower = RandomUtils.nextDouble(minIdlePower, maxIdlePower);
 		double realMinMaxPower = Math.max(idlePower, minMaxPower);
-		long networkBW = RandomUtils.nextLong(minPMInBW, maxPMInBW);
-		PMForwarder f = new PMForwarder((double) RandomUtils.nextInt(1,
-				maxCoreCount), SeedSyncer.centralRnd.nextDouble()
-				* maxProcessingCap, RandomUtils.nextLong(minMem, maxMem),
-				new Repository(RandomUtils.nextLong(minDisk, maxDisk),
-						genNewName("PM"), networkBW, networkBW, networkBW / 2,
-						latencyMap), SeedSyncer.centralRnd.nextInt(maxOnDelay),
+		PMForwarder f = new PMForwarder((double) RandomUtils.nextInt(1, maxCoreCount),
+				SeedSyncer.centralRnd.nextDouble() * maxProcessingCap, RandomUtils.nextLong(minMem, maxMem),
+				getNewRepository(1), SeedSyncer.centralRnd.nextInt(maxOnDelay),
 				SeedSyncer.centralRnd.nextInt(maxOffDelay),
-				PowerTransitionGenerator.generateTransitions(
-						RandomUtils.nextDouble(minMinPower, maxMinPower),
-						idlePower,
-						RandomUtils.nextDouble(realMinMaxPower, maxMaxPower),
-						30, 40));
+				PowerTransitionGenerator.generateTransitions(RandomUtils.nextDouble(minMinPower, maxMinPower),
+						idlePower, RandomUtils.nextDouble(realMinMaxPower, maxMaxPower), 30, 40));
 		pmfs.add(f);
 		return f;
 	}
 
-	public static IaaSService getNewIaaSService()
-			throws IllegalArgumentException, SecurityException,
-			InstantiationException, IllegalAccessException,
-			InvocationTargetException, NoSuchMethodException {
-		IaaSForwarder f = new IaaSForwarder(vmSchClasses[RandomUtils.nextInt(0,
-				vmSchClasses.length)], pmContClasses[RandomUtils.nextInt(0,
-				pmContClasses.length)]);
+	public static IaaSService getNewIaaSService() throws IllegalArgumentException, SecurityException,
+			InstantiationException, IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+		IaaSForwarder f = new IaaSForwarder(vmSchClasses[RandomUtils.nextInt(0, vmSchClasses.length)],
+				pmContClasses[RandomUtils.nextInt(0, pmContClasses.length)]);
 		ifs.add(f);
 		return f;
+	}
+
+	public static IaaSService getComplexInfrastructure(final int pmCount)
+			throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException,
+			InvocationTargetException, NoSuchMethodException, NoSuchFieldException {
+		IaaSService iaas = ExercisesBase.getNewIaaSService();
+		Repository centralStorage = ExercisesBase.getNewRepository(pmCount);
+		iaas.registerRepository(centralStorage);
+		ArrayList<PhysicalMachine> pmlist = new ArrayList<PhysicalMachine>();
+		long minSize = centralStorage.getMaxStorageCapacity();
+		for (int i = 0; i < pmCount; i++) {
+			PhysicalMachine curr = ExercisesBase.getNewPhysicalMachine();
+			pmlist.add(curr);
+			minSize = Math.min(minSize, curr.localDisk.getMaxStorageCapacity());
+		}
+		iaas.bulkHostRegistration(pmlist);
+		VirtualAppliance va = new VirtualAppliance("mainVA", 30, 0, false, minSize / 50);
+		centralStorage.registerObject(va);
+		return iaas;
 	}
 
 	public static void reset() {

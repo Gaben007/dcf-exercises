@@ -20,17 +20,10 @@
  *  
  *  (C) Copyright 2015, Gabor Kecskemeti (kecskemeti@iit.uni-miskolc.hu)
  */
+package hu.unimiskolc.iit.distsys.interfaces;
 
-package hu.unimiskolc.iit.distsys;
+import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 
-public interface VMCreationApproaches {
-	public void directVMCreation() throws Exception;
-
-	public void twoPhaseVMCreation() throws Exception;
-
-	public void indirectVMCreation() throws Exception;
-
-	public void migratedVMCreation() throws Exception;
-	
-	public void indirect100VMCreation() throws Exception;
+public interface FillInAllPMs {
+	void filler(IaaSService iaas, int vmCount);
 }
