@@ -2,6 +2,8 @@ package hu.unimiskolc.iit.distsys;
 
 import java.awt.List;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 import hu.mta.sztaki.lpds.cloud.simulator.Timed;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
@@ -38,16 +40,25 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 
 		int vmCountPerPm = vmCount / iaas.machines.size();
 		
+		
+		VmRequester vmCreationRequests = new VmRequester();
 		for (PhysicalMachine pm : iaas.machines){
 			ResourceConstraints pmResources = pm.getCapacities();
 			double processorCountPerVm = pm.freeCapacities.getRequiredCPUs() / vmCountPerPm;
 			
 			ResourceConstraints rc = new ConstantConstraints(processorCountPerVm, pmResources.getRequiredProcessingPower() / vmCountPerPm, pm.freeCapacities.getRequiredMemory() / vmCountPerPm);
-			requestSpecifiedVM(iaas, vaRepoPair.getVa(), rc, vaRepoPair.getRepository(), vmCountPerPm);
-			Timed.simulateUntilLastEvent();
+			vmCreationRequests.addRequest(new VmRequest(rc, vmCountPerPm));
 		}
 		
+		requestSpecifiedVM(iaas, vaRepoPair, vmCreationRequests);
+		Timed.simulateUntilLastEvent();
 		
+		for (PhysicalMachine pm : iaas.machines){
+			double alma = pm.freeCapacities.getRequiredCPUs();
+			//java.io.Console
+			System.out.println(alma);
+			alma += 1;
+		}
 	}
 	
 	private VaRepoContainer getVA(IaaSService iaas) throws Exception {
@@ -61,25 +72,55 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 		return null;
 	}
 	
-	private VirtualMachine[] requestSpecifiedVM(IaaSService iaas, VirtualAppliance va, ResourceConstraints rc, Repository repo, int count) throws Exception{
-		return iaas.requestVM(va, rc, repo, count);
+	private ArrayList<VirtualMachine> requestSpecifiedVM(IaaSService iaas, VaRepoContainer vaRepoPair, VmRequester vmCreationRequests)throws Exception{
+		ArrayList<VirtualMachine> results = new ArrayList<VirtualMachine>();
+		
+		for (VmRequest request : vmCreationRequests.getOrderedRequests()){
+			results.addAll(Arrays.asList(iaas.requestVM(vaRepoPair.getVa(), request.rc, vaRepoPair.getRepository(), request.count)));
+		}
+		
+		return results;
 	}
 	
+	
+	// Private methods
 	private class VmRequester {
 		private ArrayList<VmRequest> requests;
 		
 		public VmRequester() {
 			this.requests = new ArrayList<VmRequest>();
 		}
+
+		public void addRequest(VmRequest request) {
+			this.requests.add(request);
+		}
+		
+		public ArrayList<VmRequest> getOrderedRequests() {
+			ArrayList<VmRequest> result = (ArrayList<VmRequest>)this.requests.clone();
+			Collections.sort(result, Collections.reverseOrder());
+			return result;
+		}
 	}
 	
-	private class VmRequest{
+	private class VmRequest implements Comparable<VmRequest>{
 		ResourceConstraints rc;
 		int count;
 		
 		public VmRequest(ResourceConstraints rc, int count){
 			this.rc = rc;
 			this.count = count;
+		}
+
+		@Override
+		public int compareTo(VmRequest arg0) {
+			double sCpu = this.rc.getRequiredCPUs();
+			double tCpu = arg0.rc.getRequiredCPUs();
+			
+			if (sCpu == tCpu)
+				return 0;
+			if (sCpu > tCpu)
+				return 1;
+			return -1;
 		}
 	}
 	
