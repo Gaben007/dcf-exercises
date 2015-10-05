@@ -75,6 +75,15 @@ public class VMCreation implements VMCreationApproaches {
 		Timed.simulateUntilLastEvent();
 	}
 	
+	@Override
+	public void indirect100VMCreation() throws Exception {
+		PhysicalMachine pm = ExercisesBase.getNewPhysicalMachine();
+		Timed.simulateUntilLastEvent();
+		
+		createVMByIaaSRequest(pm, "Disk1");
+	}
+	
+	
 	private void createVMByRequest(PhysicalMachine pm, String storageId) throws VMManagementException, NetworkException{
 		VirtualAppliance va = new VirtualAppliance(storageId, 1, 0);
 		pm.localDisk.registerObject(va);
@@ -110,4 +119,65 @@ public class VMCreation implements VMCreationApproaches {
 		iaas.requestVM(va, constraint, pm.localDisk, 1);
 		Timed.simulateUntilLastEvent();
 	}
+	
+	private void getPhysicalMachines(){
+		
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -142,4 +142,66 @@ public class TestVMCreation {
 				stop.isAllocVMCalled() && !stop.isDeployVMCalled()
 						&& !stop.isReqVMCalled());
 	}
+	
+	@Test()
+	public void bigResourceTest(){
+		vmc.indirect100VMCreation();
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
