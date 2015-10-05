@@ -55,10 +55,10 @@ public class TestRoundRobinJobSched {
 		FillInAllPMs myPMFiller = TestCreatorFactory.getPMFiller();
 		myPMFiller.filler(myIaaS, requestedVMcount);
 		Assert.assertEquals("Should have all PMs running as all should be occupied with VMs", myIaaS.machines.size(),
-				myIaaS.runningMachines.size());/*
+				myIaaS.runningMachines.size());
 		for (PhysicalMachine pm : myIaaS.machines) {
 			Assert.assertEquals("No PM should have free CPUs", 0, pm.freeCapacities.getRequiredCPUs(), 0.00000001);
-		}
+		}/*
 		final Collection<VirtualMachine> vms = myIaaS.listVMs();
 		Assert.assertEquals("Should have exactly the specified number of VMs on the IaaS", requestedVMcount,
 				vms.size());
