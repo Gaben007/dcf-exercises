@@ -9,6 +9,7 @@ import hu.mta.sztaki.lpds.cloud.simulator.Timed;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.PhysicalMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
+import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine.State;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.constraints.ConstantConstraints;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.constraints.ResourceConstraints;
 import hu.mta.sztaki.lpds.cloud.simulator.io.Repository;
@@ -21,44 +22,67 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 	@Override
 	public void filler(IaaSService iaas, int vmCount) {
 		try {
-			for (PhysicalMachine pm : iaas.machines){
-				if (!pm.isRunning()){
-					pm.turnon();
-				}
-			}
-			Timed.simulateUntilLastEvent();
+			int vmCountPerPm = vmCount / iaas.machines.size();
+			VaRepoContainer vaRepoPair = getVA(iaas);
+			if (vaRepoPair == null)
+				throw new Exception("VA is not registered in the IaaS");
 			
-			createVirtualMachines(iaas, vmCount);
+			for (PhysicalMachine pm : iaas.machines){
+				pm.switchoff(null);
+				Timed.simulateUntilLastEvent();
+			}
+			
+			for (PhysicalMachine pm : iaas.machines){
+				//if (!pm.isRunning()){
+					pm.turnon();
+					Timed.simulateUntilLastEvent();
+					
+					createVirtualMachines(iaas, pm, vaRepoPair, vmCountPerPm);
+					Timed.simulateUntilLastEvent();
+				//}
+			}
+			
+			for (PhysicalMachine pm : iaas.machines){
+				double alma = pm.freeCapacities.getRequiredCPUs();
+				//java.io.Console
+				System.out.println(alma);
+				alma += 1;
+			}
 		}
 		catch (Exception e) { }
 	}
 
-	private void createVirtualMachines(IaaSService iaas, int vmCount) throws Exception {
-		VaRepoContainer vaRepoPair = getVA(iaas);
-		if (vaRepoPair == null)
-			throw new Exception("VA is not registered in the IaaS");
-
-		int vmCountPerPm = vmCount / iaas.machines.size();
+	private void createVirtualMachines(IaaSService iaas, PhysicalMachine pm, VaRepoContainer vaRepoPair, int vmCount) throws Exception {
+		//VmRequester vmCreationRequests = new VmRequester();
+		ResourceConstraints pmResources = pm.getCapacities();
+		double processorCountPerVm = pm.freeCapacities.getRequiredCPUs() / vmCount - 0.0000000001;
+		double powering = 1;//pmResources.getRequiredProcessingPower() / vmCount / 2;
+		long mem = 1;//pmResources.getRequiredMemory() / vmCount / 2;
+		
+		ResourceConstraints rc = new ConstantConstraints(processorCountPerVm, powering, mem);
+		//vmCreationRequests.addRequest(new VmRequest(rc, vmCount));
+		//iaas.requestVM(vaRepoPair.getVa(), rc, vaRepoPair.getRepository(), vmCount);
 		
 		
-		VmRequester vmCreationRequests = new VmRequester();
-		for (PhysicalMachine pm : iaas.machines){
-			ResourceConstraints pmResources = pm.getCapacities();
-			double processorCountPerVm = pm.freeCapacities.getRequiredCPUs() / vmCountPerPm;
-			
-			ResourceConstraints rc = new ConstantConstraints(processorCountPerVm, pmResources.getRequiredProcessingPower() / vmCountPerPm, pm.freeCapacities.getRequiredMemory() / vmCountPerPm);
-			vmCreationRequests.addRequest(new VmRequest(rc, vmCountPerPm));
+		for (int i = 0; i < vmCount; i++){
+			VirtualMachine[] vms = null;
+			while (vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING){
+				vms = iaas.requestVM(vaRepoPair.getVa(), rc, vaRepoPair.getRepository(), 1);
+				rc = new ConstantConstraints(rc.getRequiredCPUs() - 0.00000001, rc.getRequiredProcessingPower() - 0.00000001, rc.getRequiredMemory() - 1);
+				Timed.simulateUntilLastEvent();				
+			}
 		}
 		
-		requestSpecifiedVM(iaas, vaRepoPair, vmCreationRequests);
-		Timed.simulateUntilLastEvent();
-		
-		for (PhysicalMachine pm : iaas.machines){
-			double alma = pm.freeCapacities.getRequiredCPUs();
-			//java.io.Console
-			System.out.println(alma);
-			alma += 1;
+		if (pm.freeCapacities.getRequiredCPUs() > 0.000001) {
+			VirtualMachine[] vms = null;
+			while (vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING){
+				rc = new ConstantConstraints(pm.freeCapacities.getRequiredCPUs() - 0.000000001, pm.freeCapacities.getRequiredProcessingPower() - 0.000000001, pm.freeCapacities.getRequiredMemory()- 1);
+				vms = iaas.requestVM(vaRepoPair.getVa(), rc, vaRepoPair.getRepository(), 1);
+				Timed.simulateUntilLastEvent();
+			}
 		}
+		
+		//requestSpecifiedVM(iaas, vaRepoPair, vmCreationRequests);
 	}
 	
 	private VaRepoContainer getVA(IaaSService iaas) throws Exception {
