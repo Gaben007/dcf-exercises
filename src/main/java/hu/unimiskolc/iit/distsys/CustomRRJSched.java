@@ -3,6 +3,7 @@ package hu.unimiskolc.iit.distsys;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import hu.mta.sztaki.lpds.cloud.simulator.DeferredEvent;
 import hu.mta.sztaki.lpds.cloud.simulator.Timed;
 import hu.mta.sztaki.lpds.cloud.simulator.helpers.job.Job;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
@@ -26,7 +27,7 @@ public class CustomRRJSched implements BasicJobScheduler {
 	@Override
 	public void setupVMset(Collection<VirtualMachine> vms) {
 		for (VirtualMachine vm : vms) {
-			this.vms.add(new VmContainer(vm));
+			this.vms.add(new VmContainer(vm, false));
 		}
 	}
 
@@ -58,13 +59,24 @@ public class CustomRRJSched implements BasicJobScheduler {
 		catch (Exception e)
 		{ }
 	}
+	
+	public void HandleVmDestroyRequest(VmContainer vmc){
+		this.vms.remove(vmc);
+		//this.iaas.terminateVM(vmc.vm, true);
+		
+		try {
+			vmc.vm.destroy(true);
+		}
+		catch (Exception e)
+		{ }
+	}
 
 	
 	
 	private VmContainer getIdealVm(){
 		for (VmContainer vmc : this.vms) {
-			if (!vmc.isProcessingJob){
-				vmc.isProcessingJob = true;
+			if (!vmc.getIsProcessingJob()) {
+				vmc.setIsProcessingJob(true);
 				return vmc;
 			}
 		}
@@ -85,8 +97,6 @@ public class CustomRRJSched implements BasicJobScheduler {
 		Timed.simulateUntilLastEvent();
 		if (createdVms == null || createdVms.length == 0 || createdVms[0] == null || createdVms[0].getState() != State.RUNNING)
 			return null; // there are no enough resource
-		
-		
 		
 		// retrieves new vmc
 		VmContainer vmc = new VmContainer(createdVms[0], true);
@@ -116,17 +126,64 @@ public class CustomRRJSched implements BasicJobScheduler {
 	
 	
 	public class VmContainer {
-		public VirtualMachine vm;
-		public boolean isProcessingJob;
+		private boolean isProcessingJob;
+		private DeferredEvent timer;
+		private CustomRRJSched scheduler;
 		
-		public VmContainer(VirtualMachine vm) {
+		public VirtualMachine vm;
+		
+		public VmContainer(VirtualMachine vm, CustomRRJSched scheduler) {
 			this.vm = vm;
+			this.scheduler = scheduler;
 			this.isProcessingJob = false;
+			this.timer = null;
 		}
 		
 		public VmContainer(VirtualMachine vm, boolean isProcessingJob) {
 			this.vm = vm;
 			this.isProcessingJob = isProcessingJob;
+		}
+		
+		public boolean getIsProcessingJob() {
+			return this.isProcessingJob;
+		}
+		
+		public void setIsProcessingJob(boolean value) {
+			this.isProcessingJob = value;
+			
+			if (value)
+				stopVmDestroyer();
+			else
+				startVmDestroyer();
+		}
+		
+		private void startVmDestroyer() {
+			this.timer = new CustomDeferredEvent(25000, this.scheduler, this);
+		}
+		
+		private void stopVmDestroyer() {
+			// cancels the timer request
+			if (this.timer != null) {
+				this.timer.cancel();
+				this.timer = null;
+			}
+		}
+		
+		private class CustomDeferredEvent extends DeferredEvent {
+			private CustomRRJSched scheduler;
+			private VmContainer vmc;
+			
+			public CustomDeferredEvent(final long delay, CustomRRJSched scheduler, VmContainer vmc){
+				super(delay);
+				this.scheduler = scheduler;
+				this.vmc = vmc;
+			}
+			
+			@Override
+			protected void eventAction() {
+				// call an event to destroy the vmc
+				this.scheduler.HandleVmDestroyRequest(vmc);
+			}
 		}
 	}
 	
