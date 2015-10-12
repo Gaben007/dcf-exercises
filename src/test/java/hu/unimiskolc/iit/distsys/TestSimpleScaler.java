@@ -35,12 +35,29 @@ import hu.mta.sztaki.lpds.cloud.simulator.io.Repository;
 import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
 
 import java.util.List;
+import java.util.Properties;
 
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestSimpleScaler {
-	@Test(timeout = 10000)
+	@Before
+	public void initVMC() throws Exception
+	{
+		setDependencies();
+		
+		Timed.resetTimed();
+	}
+	
+	public void setDependencies() throws Exception {
+		Properties p = new Properties();
+		p.setProperty("hu.unimiskolc.iit.distsys.RRJSched", "hu.unimiskolc.iit.distsys.CustomRRJSched");
+		
+		System.setProperties(p);
+	}
+	
+	@Test()
 	public void testCase() throws Exception {
 		// Preparing the IaaS
 		final IaaSService myIaaS = ExercisesBase.getComplexInfrastructure(100);
