@@ -25,5 +25,11 @@ package hu.unimiskolc.iit.distsys.interfaces;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 
 public interface FillInAllPMs {
+	/**
+	 * A function to fill an IaaS with a specified amount of VMs completely.
+	 * 
+	 * @param iaas
+	 * @param vmCount
+	 */
 	void filler(IaaSService iaas, int vmCount);
 }

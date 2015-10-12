@@ -24,11 +24,33 @@
 package hu.unimiskolc.iit.distsys.interfaces;
 
 public interface VMCreationApproaches {
+	/**
+	 * Shows how one can create a VM on a PM with a single function call.
+	 * 
+	 * @throws Exception
+	 */
 	public void directVMCreation() throws Exception;
 
+	/**
+	 * Shows how one can create a VM on a PM with resource allocations involved.
+	 * 
+	 * @throws Exception
+	 */
 	public void twoPhaseVMCreation() throws Exception;
 
+	/**
+	 * Shows how one can use an IaaS service to hide the complexity of multi PM
+	 * management and still request the VM in a single call.
+	 * 
+	 * @throws Exception
+	 */
 	public void indirectVMCreation() throws Exception;
 
+	/**
+	 * Shows how a VM can be created on a PM by migrating the VM from another
+	 * PM.
+	 * 
+	 * @throws Exception
+	 */
 	public void migratedVMCreation() throws Exception;
 }

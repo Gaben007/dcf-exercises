@@ -25,9 +25,30 @@ package hu.unimiskolc.iit.distsys.interfaces;
 import java.util.Collection;
 
 import hu.mta.sztaki.lpds.cloud.simulator.helpers.job.Job;
+import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 
 public interface BasicJobScheduler {
+	/**
+	 * Use this function to set up a scheduler that should operate on a
+	 * predefined VM set.
+	 * 
+	 * @param vms
+	 */
 	void setupVMset(Collection<VirtualMachine> vms);
+
+	/**
+	 * use this function to set up a scheduler that should operate on a dynamic
+	 * VM set requested from an IaaS service.
+	 * 
+	 * @param iaas
+	 */
+	void setupIaaS(IaaSService iaas);
+
+	/**
+	 * This function is called once a job arrives to the system.
+	 * 
+	 * @param j
+	 */
 	void handleJobRequestArrival(Job j);
 }
