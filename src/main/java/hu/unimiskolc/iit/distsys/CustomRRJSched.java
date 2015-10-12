@@ -24,7 +24,14 @@ import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
 import hu.unimiskolc.iit.distsys.interfaces.BasicJobScheduler;
 
 public class CustomRRJSched implements BasicJobScheduler {
+	public static int handleCallCount = 0;
+	public static int retryRequestCount = 0;
+	public static int delayedCreationCount = 0;
+	public static int unsuccessfulCreationCount = 0;
+	public static int nullResourceFound = 0;
+	
 	private IaaSService iaas;
+	private double timeRatio = 0.8;
 	Collection<VmContainer> vms = new ArrayList<CustomRRJSched.VmContainer>();
 	
 	@Override
@@ -52,15 +59,18 @@ public class CustomRRJSched implements BasicJobScheduler {
 			return; // handle only ComplexDCFJobs
 		
 		// start VM finding
-		VmContainer vmc =null;
+		VmContainer vmc = null;
 		int callCounter = 0;
 		vmc = getOrCreateAndStartIdealVmWithJob(job);
+		
 		
 		if (vmc == null)
 			return;
 		
-		try{
+		handleCallCount++;
+		try {
 			job.startNowOnVM(vmc.vm, new FinishedJobEventHandler(vmc));
+			//System.out.println(index++ + " VM reuse (" + job.getId() + ")");
 		}
 		catch (Exception e)
 		{ }
@@ -81,7 +91,7 @@ public class CustomRRJSched implements BasicJobScheduler {
 	
 	private VmContainer getOrCreateAndStartIdealVmWithJob(ComplexDCFJob job){
 		for (VmContainer vmc : this.vms) {
-			if (!vmc.getIsProcessingJob()) {
+			if (!vmc.getIsProcessingJob() && vmc.resource.getTotalProcessingPower() > job.nprocs * ExercisesBase.maxProcessingCap * timeRatio) {
 				vmc.setIsProcessingJob(true);
 				return vmc;
 			}
@@ -93,26 +103,48 @@ public class CustomRRJSched implements BasicJobScheduler {
 		//ConstantConstraints rc = new ConstantConstraints(availableRc.getRequiredCPUs() / 5, availableRc.getRequiredProcessingPower() / 5, availableRc.getRequiredMemory() / 5);
 		double requiredResource = job.nprocs * ExercisesBase.maxProcessingCap;
 		ResourceConstraints availableEnoughRc = getMinimalAvailablePhysicalResource(requiredResource);
-		if (availableEnoughRc == null)
-			return null;
+		if (availableEnoughRc == null) {
+			nullResourceFound++;
+			//return null;
+			this.freeUnusedVms();
+			Timed.jumpTime(1000);
+			this.handleJobRequestArrival(job);
+		}
 		
-		ConstantConstraints rc = new ConstantConstraints(requiredResource / availableEnoughRc.getRequiredProcessingPower(), availableEnoughRc.getRequiredProcessingPower(), 1);
+		ConstantConstraints rc = new ConstantConstraints(requiredResource / availableEnoughRc.getRequiredProcessingPower() * timeRatio, availableEnoughRc.getRequiredProcessingPower() * 0.95, 1);
 		
 		VirtualMachine[] createdVms;
-		try{
+		try {
 			createdVms = iaas.requestVM(vaRepo.getVa(), rc, vaRepo.getRepository(), 1);
 		}
 		catch (Exception e) {
+			System.out.println("Error: 1");
 			return null;
 		}
 		
 		//Timed.simulateUntilLastEvent();
-		if (createdVms == null || createdVms.length == 0 || createdVms[0] == null)
+		if (createdVms == null || createdVms.length == 0 || createdVms[0] == null) {
+			System.out.println("Error: 2");
 			return null; // there are no enough resource
+		}
 		
 		VirtualMachine createdVm = createdVms[0];
 		// wait for VM creation
-		createdVm.subscribeStateChange(new VmCreationHandler(this, job));
+		if (createdVm.getState() == State.INITIAL_TR)
+			createdVm.subscribeStateChange(new VmCreationHandler(this, job, rc));
+		else {
+			unsuccessfulCreationCount++;
+			
+			if (createdVm.getState() == State.DESTROYED){
+				try {
+					iaas.terminateVM(createdVm, true);
+				}
+				catch (Exception e)
+				{ }
+			}
+			
+			//this.handleJobRequestArrival(job);
+		}
 		
 		return null;
 	}
@@ -141,12 +173,21 @@ public class CustomRRJSched implements BasicJobScheduler {
 		ResourceConstraints resultRc = null;
 		
 		for (PhysicalMachine pm : this.iaas.machines) {
-			if (pm.freeCapacities.getTotalProcessingPower() > requestedResource && (resultRc == null || resultRc.getTotalProcessingPower() > pm.freeCapacities.getTotalProcessingPower()))
+			if (pm.freeCapacities.getTotalProcessingPower() >= requestedResource * timeRatio && (resultRc == null || resultRc.getTotalProcessingPower() > pm.freeCapacities.getTotalProcessingPower()))
 				resultRc = pm.freeCapacities;
 		}
 		
 		return resultRc;
 	}
+	
+	private void freeUnusedVms() {
+		for (VmContainer vmc : this.vms) {
+			if (!vmc.getIsProcessingJob()) {
+				vmc.destroy();
+			}	
+		}
+	}
+	
 	
 	
 	public class VmContainer {
@@ -155,9 +196,11 @@ public class CustomRRJSched implements BasicJobScheduler {
 		private CustomRRJSched scheduler;
 		
 		public VirtualMachine vm;
+		public ResourceConstraints resource;
 		
-		public VmContainer(VirtualMachine vm, CustomRRJSched scheduler) {
+		public VmContainer(VirtualMachine vm, ResourceConstraints rc, CustomRRJSched scheduler) {
 			this.vm = vm;
+			this.resource = rc;
 			this.scheduler = scheduler;
 			this.isProcessingJob = false;
 			this.timer = null;
@@ -180,6 +223,15 @@ public class CustomRRJSched implements BasicJobScheduler {
 			else
 				startVmDestroyer();
 		}
+		
+		public void destroy() {
+			if (this.timer  != null)
+				this.timer.cancel();
+			
+			if (this.scheduler != null)
+				this.scheduler.handleVmDestroyRequest(this);
+		}
+		
 		
 		private void startVmDestroyer() {
 			this.timer = new CustomDeferredEvent(25000, this.scheduler, this);
@@ -206,7 +258,8 @@ public class CustomRRJSched implements BasicJobScheduler {
 			@Override
 			protected void eventAction() {
 				// call an event to destroy the vmc
-				this.scheduler.handleVmDestroyRequest(vmc);
+				if (this.scheduler != null)
+					this.scheduler.handleVmDestroyRequest(vmc);
 			}
 		}
 	}
@@ -250,25 +303,34 @@ public class CustomRRJSched implements BasicJobScheduler {
 	private class VmCreationHandler implements StateChange {
 		private CustomRRJSched scheduler;
 		private ComplexDCFJob job;
+		private ResourceConstraints rc;
 		
-		public VmCreationHandler(CustomRRJSched scheduler, ComplexDCFJob job) {
+		public VmCreationHandler(CustomRRJSched scheduler, ComplexDCFJob job, ResourceConstraints rc) {
 			this.scheduler = scheduler;
 			this.job = job;
+			this.rc = rc;
 		}
 		
 		@Override
 		public void stateChanged(VirtualMachine vm, State oldState, State newState) {
 			if (newState == State.RUNNING){
 
+				delayedCreationCount++;
 				// retrieves new vmc
-				VmContainer vmc = new VmContainer(vm, true);
+				VmContainer vmc = new VmContainer(vm, this.rc, this.scheduler);
 				this.scheduler.vms.add(vmc) ;
 				
 				try {
 					this.job.startNowOnVM(vmc.vm, new FinishedJobEventHandler(vmc));
+					//System.out.println(index++ + " VM creation (" + job.getId() + ")");
 				}
 				catch (Exception e)
 				{ }
+			}
+			else if (newState == State.DESTROYED) {
+				//System.out.println(index + " VM recreation (" + job.getId() + ") ---------------------");
+				retryRequestCount++;
+				this.scheduler.handleJobRequestArrival(this.job);
 			}
 		}
 	}

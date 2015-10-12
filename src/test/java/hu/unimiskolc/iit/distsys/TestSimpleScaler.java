@@ -128,6 +128,13 @@ public class TestSimpleScaler {
 		new JobtoVMScheduler(myIaaS, jobs);
 
 		Timed.simulateUntilLastEvent();
+		
+		System.out.println("handle (reused): " + CustomRRJSched.handleCallCount);
+		System.out.println("retry: " + CustomRRJSched.retryRequestCount);
+		System.out.println("delayed: " + CustomRRJSched.delayedCreationCount);
+		System.out.println("unsuccessful: " + CustomRRJSched.unsuccessfulCreationCount);
+		System.out.println("no resource found: " + CustomRRJSched.nullResourceFound);
+		
 		for (final Job j : jobs) {
 			// Basic tests:
 			Assert.assertTrue("All jobs should start but " + j + " did not",
