@@ -51,8 +51,8 @@ import org.apache.commons.lang3.RandomUtils;
 public class ExercisesBase {
 	public static final HashMap<String, Integer> latencyMap = new HashMap<String, Integer>();
 	public static final int maxCoreCount = 64;
-	public static final double minProcessingCap = 4000000; // 4Mflop/ms
-	public static final double maxProcessingCap = 5000000; // 5Mflop/ms
+	public static final double minProcessingCap = 3000000; // 4Mflop/ms
+	public static final double maxProcessingCap = 4000000; // 5Mflop/ms
 	public static final long maxMem = 256l * 1024 * 1024 * 1024; // 256 GB
 	public static final long minMem = 1024l * 1024 * 1024; // 1 GB;
 	public static final long maxDisk = 6l * 1024 * 1024 * 1024 * 1024; // 6 TB

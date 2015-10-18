@@ -147,12 +147,12 @@ public class CustomRRJSched implements BasicJobScheduler {
 			Timed.jumpTime(100);
 		}
 		
-		// wait for VM creation
 		if (createdVm.getState() == State.INITIAL_TR)
+			// wait for VM creation
 			createdVm.subscribeStateChange(new VmCreationHandler(this, job, rc));
 		else {
+			// terminate unsuccessfully created VM
 			unsuccessfulCreationCount++;
-			System.out.println(createdVm.getState().name());
 			
 			if (createdVm.getState() == State.DESTROYED){
 				try {
@@ -162,6 +162,7 @@ public class CustomRRJSched implements BasicJobScheduler {
 				{ }
 			}
 			
+			// try to create again
 			//this.handleJobRequestArrival(job);
 		}
 		
@@ -193,7 +194,8 @@ public class CustomRRJSched implements BasicJobScheduler {
 		
 		for (PhysicalMachine pm : this.iaas.machines) {
 			if (pm.freeCapacities.getTotalProcessingPower() >= requestedResource * timeRatio && (resultRc == null || resultRc.getTotalProcessingPower() > pm.freeCapacities.getTotalProcessingPower()))
-				resultRc = pm.freeCapacities;
+				//resultRc = pm.freeCapacities;
+				return pm.freeCapacities;
 		}
 		
 		return resultRc;
@@ -211,7 +213,7 @@ public class CustomRRJSched implements BasicJobScheduler {
 	
 	public class VmContainer {
 		private boolean isProcessingJob;
-		private DeferredEvent timer;
+		private CustomDeferredEvent timer;
 		private CustomRRJSched scheduler;
 		
 		public VirtualMachine vm;
@@ -244,8 +246,11 @@ public class CustomRRJSched implements BasicJobScheduler {
 		}
 		
 		public void destroy() {
-			if (this.timer  != null)
-				this.timer.cancel();
+			if (this.timer  != null) {
+				this.timer.shouldFire = false;
+				this.timer = null;
+				//this.timer.cancel();
+			}
 			
 			if (this.scheduler != null)
 				this.scheduler.handleVmDestroyRequest(this);
@@ -253,13 +258,14 @@ public class CustomRRJSched implements BasicJobScheduler {
 		
 		
 		private void startVmDestroyer() {
-			this.timer = new CustomDeferredEvent(25000, this.scheduler, this);
+			this.timer = new CustomDeferredEvent(30000, this.scheduler, this);
 		}
 		
 		private void stopVmDestroyer() {
 			// cancels the timer request
 			if (this.timer != null) {
-				this.timer.cancel();
+				this.timer.shouldFire = false;
+				//this.timer.cancel();
 				this.timer = null;
 			}
 		}
@@ -267,6 +273,7 @@ public class CustomRRJSched implements BasicJobScheduler {
 		private class CustomDeferredEvent extends DeferredEvent {
 			private CustomRRJSched scheduler;
 			private VmContainer vmc;
+			public boolean shouldFire = true;
 			
 			public CustomDeferredEvent(final long delay, CustomRRJSched scheduler, VmContainer vmc){
 				super(delay);
@@ -277,8 +284,10 @@ public class CustomRRJSched implements BasicJobScheduler {
 			@Override
 			protected void eventAction() {
 				// call an event to destroy the vmc
-				if (this.scheduler != null)
+				if (this.scheduler != null && this.shouldFire)
 					this.scheduler.handleVmDestroyRequest(vmc);
+				
+				this.shouldFire = false;
 			}
 		}
 	}
@@ -310,12 +319,12 @@ public class CustomRRJSched implements BasicJobScheduler {
 		
 		@Override
 		public void conComplete() {
-			this.vmc.isProcessingJob = false;
+			this.vmc.setIsProcessingJob(false);
 		}
 
 		@Override
 		public void conCancelled(ResourceConsumption problematic) {
-			this.vmc.isProcessingJob = false;
+			this.vmc.setIsProcessingJob(false);
 		}
 	}
 

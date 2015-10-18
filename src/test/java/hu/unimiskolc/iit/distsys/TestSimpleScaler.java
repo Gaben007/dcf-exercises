@@ -135,24 +135,27 @@ public class TestSimpleScaler {
 		System.out.println("unsuccessful: " + CustomRRJSched.unsuccessfulCreationCount);
 		System.out.println("no resource found: " + CustomRRJSched.nullResourceFound);
 		
+		int jobIndex = 0;
 		for (final Job j : jobs) {
+			jobIndex++;
 			// Basic tests:
-			Assert.assertTrue("All jobs should start but " + j + " did not",
+			Assert.assertTrue("All jobs should start but " + j + " did not. ",
 					j.getRealqueueTime() >= 0);
 			Assert.assertTrue("All jobs should be complete but " + j
-					+ " did not", j.getRealstopTime() >= 0);
+					+ " did not. ", j.getRealstopTime() >= 0);
 
 			// More complex tests:
 			// Should not allow too slow execution time
 			Assert.assertTrue(
 					"Every job should run faster or equal than it was originally expected but "
-							+ j + " did so",
-					j.getExectimeSecs() * 1.5 > j.getRealstopTime()
-							- j.getRealqueueTime());
+							+ " did so." + " Job index is " + jobIndex + ". Real start: " + j.getRealqueueTime() +
+							", real stop: " + j.getRealstopTime() + ", real different: " + (j.getRealstopTime() - j.getRealqueueTime()) +
+							" expected value: " + (j.getExectimeSecs() * 1.5) + ". ",
+					j.getExectimeSecs() * 1.5 > j.getRealstopTime() - j.getRealqueueTime());
 			// Should not allow too long queueing time
 			Assert.assertTrue(
 					"Jobs should not queue more than a VM instantiation time but "
-							+ j + " did so",
+							+ j + " did so. ",
 					j.getRealqueueTime() < vmCreationTime * 1.5);
 		}
 
