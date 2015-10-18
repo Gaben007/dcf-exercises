@@ -102,6 +102,7 @@ public class CustomRRJSched implements BasicJobScheduler {
 		//ResourceConstraints availableRc = getFreePhysicalMachineCapacity();
 		//ConstantConstraints rc = new ConstantConstraints(availableRc.getRequiredCPUs() / 5, availableRc.getRequiredProcessingPower() / 5, availableRc.getRequiredMemory() / 5);
 		double requiredResource = job.nprocs * ExercisesBase.maxProcessingCap;
+		double requiredProcNum;
 		ResourceConstraints availableEnoughRc = getMinimalAvailablePhysicalResource(requiredResource);
 		if (availableEnoughRc == null) {
 			nullResourceFound++;
@@ -109,9 +110,20 @@ public class CustomRRJSched implements BasicJobScheduler {
 			this.freeUnusedVms();
 			Timed.jumpTime(1000);
 			this.handleJobRequestArrival(job);
+			return null;
+		}
+		else {
+			requiredProcNum = requiredResource / availableEnoughRc.getRequiredProcessingPower();
+			if (requiredProcNum > availableEnoughRc.getRequiredCPUs())
+				requiredProcNum = availableEnoughRc.getRequiredCPUs();
 		}
 		
-		ConstantConstraints rc = new ConstantConstraints(requiredResource / availableEnoughRc.getRequiredProcessingPower() * timeRatio, availableEnoughRc.getRequiredProcessingPower() * 0.95, 1);
+		ConstantConstraints rc = new ConstantConstraints(
+			//requiredProcNum,
+			availableEnoughRc.getRequiredCPUs(),
+			availableEnoughRc.getRequiredProcessingPower(),
+			1
+		);
 		
 		VirtualMachine[] createdVms;
 		try {
@@ -129,11 +141,18 @@ public class CustomRRJSched implements BasicJobScheduler {
 		}
 		
 		VirtualMachine createdVm = createdVms[0];
+		int waitingCounter = 0;
+		while (createdVm.getState() == State.DESTROYED && waitingCounter < 3) {
+			waitingCounter++;
+			Timed.jumpTime(100);
+		}
+		
 		// wait for VM creation
 		if (createdVm.getState() == State.INITIAL_TR)
 			createdVm.subscribeStateChange(new VmCreationHandler(this, job, rc));
 		else {
 			unsuccessfulCreationCount++;
+			System.out.println(createdVm.getState().name());
 			
 			if (createdVm.getState() == State.DESTROYED){
 				try {
