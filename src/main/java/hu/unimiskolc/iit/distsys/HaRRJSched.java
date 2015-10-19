@@ -58,7 +58,6 @@ public class HaRRJSched implements BasicJobScheduler {
 		
 		// start VM finding
 		VmContainer vmc = null;
-		int callCounter = 0;
 		vmc = getOrCreateAndStartIdealVmWithJob(job);
 		
 		
@@ -109,8 +108,8 @@ public class HaRRJSched implements BasicJobScheduler {
 		
 		ConstantConstraints rc = new ConstantConstraints(
 			//requiredProcNum,
-			availableEnoughRc.getRequiredCPUs() * 0.9,
-			availableEnoughRc.getRequiredProcessingPower() * 0.9,
+			availableEnoughRc.getRequiredCPUs(),
+			availableEnoughRc.getRequiredProcessingPower(),
 			1
 		);
 		

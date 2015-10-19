@@ -77,6 +77,7 @@ public class ComplexDCFJob extends DCFJob implements ConsumptionEvent {
 			coupledJobs.put(getId(), list);
 		}
 		list.add(this);
+		this.availabilityLevel=toCoupleWith.availabilityLevel;
 	}
 
 	/**
