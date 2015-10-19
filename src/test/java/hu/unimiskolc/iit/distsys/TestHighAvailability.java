@@ -39,16 +39,33 @@ import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestHighAvailability {
 	public static final double[] availabilityLevels = { 0.98, 0.99, 0.999};
 	public static final double pmAvailability = 0.65;
 
-	@Test(timeout = 180000)
+	@Before
+	public void initVMC() throws Exception
+	{
+		setDependencies();
+		
+		Timed.resetTimed();
+	}
+	
+	public void setDependencies() throws Exception {
+		Properties p = new Properties();
+		p.setProperty("hu.unimiskolc.iit.distsys.RRJSched", "hu.unimiskolc.iit.distsys.HaRRJSched");
+		
+		System.setProperties(p);
+	}
+	
+	@Test
 	public void hatest() throws Exception {
 		int[] successCounters = new int[availabilityLevels.length];
 		int[] totalCounters = new int[availabilityLevels.length];
@@ -77,7 +94,7 @@ public class TestHighAvailability {
 		// Preparing the jobs for the VMs
 		RepetitiveRandomTraceGenerator rrtg = new RepetitiveRandomTraceGenerator(ComplexDCFJob.class);
 		// total number of jobs
-		rrtg.setJobNum(1000);
+		rrtg.setJobNum(100);
 		// joblist properties
 		rrtg.setExecmin(10);
 		rrtg.setExecmax(3600);
@@ -100,7 +117,7 @@ public class TestHighAvailability {
 		// Prepares the faulty PMs
 		class MyTimed extends Timed {
 			public MyTimed() {
-				subscribe(300000);
+				subscribe(600000);
 			}
 
 			class VMHandler implements VirtualMachine.StateChange {
@@ -218,7 +235,13 @@ public class TestHighAvailability {
 		new JobtoVMScheduler(myIaaS, jobs);
 
 		Timed.simulateUntilLastEvent();
-
+		
+		System.out.println("handle (reused): " + HaRRJSched.handleCallCount);
+		System.out.println("retry: " + HaRRJSched.retryRequestCount);
+		System.out.println("delayed: " + HaRRJSched.delayedCreationCount);
+		System.out.println("unsuccessful: " + HaRRJSched.unsuccessfulCreationCount);
+		System.out.println("no resource found: " + HaRRJSched.nullResourceFound);
+		
 		for (final Job j : jobs) {
 			ComplexDCFJob jobconv = (ComplexDCFJob) j;
 			// Basic tests:

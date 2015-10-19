@@ -119,6 +119,8 @@ public class ComplexDCFJob extends DCFJob implements ConsumptionEvent {
 		if (availabilityLevel < 0) {
 			throw new RuntimeException("CANCELLED: " + this);
 		}
+		
+		myEvent.conCancelled(problematic);
 	}
 
 	/**
