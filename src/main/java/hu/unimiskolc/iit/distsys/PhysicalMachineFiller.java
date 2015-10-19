@@ -31,6 +31,7 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 					pm.turnon();
 				}
 			}
+			Timed.simulateUntilLastEvent();
 			
 			for (PhysicalMachine pm : iaas.machines){
 				double alma = pm.freeCapacities.getRequiredCPUs();
@@ -57,12 +58,23 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 		while (createdVmCount < vmCount){
 			double allCpu = getAllCpu(iaas);
 			double maxCpu = getMaxCpu(iaas);
+			double allPower = getAllPower(iaas);
+			double maxPower = getMaxPower(iaas);
 			double neededVmsCount = vmCount - createdVmCount;
 			
 			if (allCpu >= maxCpu) {
 				double nextCpuSize = allCpu / neededVmsCount;
-				VirtualMachine vms[] = iaas.requestVM(vaRepoPair.getVa(), new ConstantConstraints(nextCpuSize > maxCpu ? maxCpu : nextCpuSize, 1, 1), vaRepoPair.getRepository(), 1);
-				Timed.simulateUntilLastEvent();
+				nextCpuSize = nextCpuSize > maxCpu ? maxCpu : nextCpuSize;
+				double nextPower = allPower / neededVmsCount / nextCpuSize > maxPower / nextCpuSize ? maxPower / nextCpuSize : allPower / neededVmsCount / nextCpuSize;
+				
+				VirtualMachine vms[] = null;
+				try {
+					vms = iaas.requestVM(vaRepoPair.getVa(), new ConstantConstraints(nextCpuSize, nextPower * 0.95, 1), vaRepoPair.getRepository(), 1);
+					Timed.simulateUntilLastEvent();
+				}
+				catch (Exception e) {
+					allCpu++;
+				}
 				
 				if (!(vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING)) {
 					createdVmCount++;
@@ -71,8 +83,7 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			else {
 				allCpu++;
 			}
-		}	
-		
+		}
 	}
 	
 	private double getAllCpu(IaaSService iaas) {
@@ -92,6 +103,27 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			if (result < pm.freeCapacities.getRequiredCPUs()){
 				result = pm.freeCapacities.getRequiredCPUs();
 			}
+		}
+		
+		return result;
+	}
+	
+	private double getAllPower(IaaSService iaas) {
+		double result = 0;
+		
+		for (PhysicalMachine pm : iaas.machines) {
+			result += pm.freeCapacities.getTotalProcessingPower();
+		}
+		
+		return result;
+	}
+	
+	private double getMaxPower(IaaSService iaas) {
+		double result = 0;
+		
+		for (PhysicalMachine pm : iaas.machines) {
+			if (result < pm.freeCapacities.getTotalProcessingPower())
+				result = pm.freeCapacities.getTotalProcessingPower();
 		}
 		
 		return result;
