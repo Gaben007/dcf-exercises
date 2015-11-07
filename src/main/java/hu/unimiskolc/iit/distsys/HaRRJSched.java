@@ -79,9 +79,6 @@ public class HaRRJSched implements BasicJobScheduler {
 						return;
 				}
 				else {
-					//if (availabilityLevels[index] * 1.05 < (double)successJobs[index] / totalJobs[index])
-					//	return;
-					
 					if (index == 2 && availabilityLevels[index] < (double)startedJobs[index] / totalJobs[index])
 						return;
 					

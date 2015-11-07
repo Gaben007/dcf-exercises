@@ -67,7 +67,7 @@ public class TestHighAvailability {
 		System.setProperties(p);
 	}
 	
-	@Test
+	@Test(timeout = 180000)
 	public void hatest() throws Exception {
 		int[] successCounters = new int[availabilityLevels.length];
 		int[] totalCounters = new int[availabilityLevels.length];
