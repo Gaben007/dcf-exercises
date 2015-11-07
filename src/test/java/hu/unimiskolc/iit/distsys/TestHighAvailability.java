@@ -67,7 +67,7 @@ public class TestHighAvailability {
 		System.setProperties(p);
 	}
 	
-	@Test(timeout = 30000)
+	@Test
 	public void hatest() throws Exception {
 		int[] successCounters = new int[availabilityLevels.length];
 		int[] totalCounters = new int[availabilityLevels.length];
@@ -96,7 +96,7 @@ public class TestHighAvailability {
 		// Preparing the jobs for the VMs
 		RepetitiveRandomTraceGenerator rrtg = new RepetitiveRandomTraceGenerator(ComplexDCFJob.class);
 		// total number of jobs
-		rrtg.setJobNum(100);
+		rrtg.setJobNum(1000);
 		// joblist properties
 		rrtg.setExecmin(10);
 		rrtg.setExecmax(3600);
@@ -299,7 +299,21 @@ public class TestHighAvailability {
 		}
 
 		for (int i = 0; i < availabilityLevels.length; i++) {
-			System.out.println(availabilityLevels[i] + " " + successCounters[i] + " " + totalCounters[i]);
+			System.out.println(
+					availabilityLevels[i] + " " + 
+					((double)successCounters[i] / totalCounters[i]) + " " +
+					((1 - availabilityLevels[i]) * 0.5) + " " +
+					successCounters[i] + " " +
+					totalCounters[i]);
+		}
+		
+		for (int i = 0; i < availabilityLevels.length; i++) {
+			System.out.println(
+					availabilityLevels[i] + " " + 
+					((double)successCounters[i] / totalCounters[i]) + " " +
+					((1 - availabilityLevels[i]) * 0.5) + " " +
+					successCounters[i] + " " +
+					totalCounters[i]);
 			Assert.assertEquals(
 					"Jobs with availability level " + availabilityLevels[i] + " did not get their expected qualities",
 					availabilityLevels[i], (double) successCounters[i] / totalCounters[i],

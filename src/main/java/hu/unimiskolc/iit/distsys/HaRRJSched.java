@@ -1,6 +1,7 @@
 package hu.unimiskolc.iit.distsys;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 
 import hu.mta.sztaki.lpds.cloud.simulator.DeferredEvent;
@@ -28,8 +29,14 @@ public class HaRRJSched implements BasicJobScheduler {
 	public static int unsuccessfulCreationCount = 0;
 	public static int nullResourceFound = 0;
 	
+	private static final double[] availabilityLevels = { 0.75, 0.9, 0.95, 0.99 };
+	private static final int[] startedJobs = { 0, 0, 0, 0};
+	private static final int[] successJobs = { 0, 0, 0, 0};
+	private static final int[] totalJobs = { 0, 0, 0, 0};
+	private static final int minJobCountToSkip = 3;
+	
 	private IaaSService iaas;
-	private double timeRatio = 0.8;
+	private double timeRatio = 0.9;
 	Collection<VmContainer> vms = new ArrayList<VmContainer>();
 	
 	@Override
@@ -46,6 +53,10 @@ public class HaRRJSched implements BasicJobScheduler {
 
 	@Override
 	public void handleJobRequestArrival(Job j) {
+		handleJobRequestArrivalInternal(j, false);
+	}
+	
+	public void handleJobRequestArrivalInternal(Job j, boolean isRecursiveCall) {
 		if (this.iaas == null)
 			return; // focus only the exact problem
 		
@@ -55,6 +66,26 @@ public class HaRRJSched implements BasicJobScheduler {
 		
 		if (job == null)
 			return; // handle only ComplexDCFJobs
+		
+		int index = Arrays.binarySearch(availabilityLevels, job.getAvailabilityLevel());
+		if (!isRecursiveCall) {
+			totalJobs[index]++;
+			
+			if (totalJobs[index] > minJobCountToSkip) {
+				if (index < 2) {
+					if (availabilityLevels[index] * 1.1 < (double)successJobs[index] / totalJobs[index])
+						return;
+					if (availabilityLevels[index] * 1.1 < (double)startedJobs[index] / totalJobs[index])
+						return;
+				}
+				else {
+					if (availabilityLevels[index] * 1.05 < (double)successJobs[index] / totalJobs[index])
+						return;
+					if (availabilityLevels[index] * 1.05 < (double)startedJobs[index] / totalJobs[index])
+						return;	
+				}
+			}
+		}
 		
 		// start VM finding
 		VmContainer vmc = null;
@@ -67,6 +98,8 @@ public class HaRRJSched implements BasicJobScheduler {
 		handleCallCount++;
 		try {
 			job.startNowOnVM(vmc.vm, new ConsumptionEventHandler(this, job, vmc));
+			if (!isRecursiveCall)
+				startedJobs[index]++;
 			//System.out.println(index++ + " VM reuse (" + job.getId() + ")");
 			
 			vmc.currentStateHandler = new VmStateChangedHandler(this, job, vmc);
@@ -260,6 +293,7 @@ public class HaRRJSched implements BasicJobScheduler {
 				
 				try {
 					this.job.startNowOnVM(vmc.vm, new ConsumptionEventHandler(this.scheduler, this.job, vmc));
+					startedJobs[Arrays.binarySearch(availabilityLevels, job.getAvailabilityLevel())]++;
 					//System.out.println(index++ + " VM creation (" + job.getId() + ")");
 					
 					vm.unsubscribeStateChange(this);
@@ -304,21 +338,35 @@ public class HaRRJSched implements BasicJobScheduler {
 		private HaRRJSched scheduler;
 		private ComplexDCFJob job;
 		private VmContainer vmc;
+		private boolean isRestarted;
 		
 		public ConsumptionEventHandler(HaRRJSched scheduler, ComplexDCFJob job, VmContainer vmc) {
 			this.scheduler = scheduler;
 			this.job = job;
 			this.vmc = vmc;
+			this.isRestarted = false;
 		}
 		
 		@Override
 		public void conComplete() {
 			this.vmc.setIsProcessingJob(false);
+			
+			if (this.isRestarted)
+				return;
+			
+			successJobs[Arrays.binarySearch(availabilityLevels, this.job.getAvailabilityLevel())]++;
 		}
 
 		@Override
 		public void conCancelled(ResourceConsumption problematic) {
-			this.scheduler.handleJobRequestArrival(new ComplexDCFJob(this.job));
+			int index = Arrays.binarySearch(availabilityLevels, job.getAvailabilityLevel());
+			if (totalJobs[index] > minJobCountToSkip) {
+				//if (availabilityLevels[index] < (double)successJobs[index] / totalJobs[index])
+				//	return;
+			}
+			
+			this.isRestarted = true;
+			this.scheduler.handleJobRequestArrivalInternal(new ComplexDCFJob(this.job), true);
 		}
 	}
 }
