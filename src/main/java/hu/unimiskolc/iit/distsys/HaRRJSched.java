@@ -33,7 +33,7 @@ public class HaRRJSched implements BasicJobScheduler {
 	private static final int[] startedJobs = { 0, 0, 0, 0};
 	private static final int[] successJobs = { 0, 0, 0, 0};
 	private static final int[] totalJobs = { 0, 0, 0, 0};
-	private static final int minJobCountToSkip = 3;
+	private static final int minJobCountToSkip = 30;
 	
 	private IaaSService iaas;
 	private double timeRatio = 0.9;
@@ -79,17 +79,27 @@ public class HaRRJSched implements BasicJobScheduler {
 						return;
 				}
 				else {
-					if (availabilityLevels[index] * 1.05 < (double)successJobs[index] / totalJobs[index])
+					//if (availabilityLevels[index] * 1.05 < (double)successJobs[index] / totalJobs[index])
+					//	return;
+					
+					if (index == 2 && availabilityLevels[index] < (double)startedJobs[index] / totalJobs[index])
 						return;
-					if (availabilityLevels[index] * 1.05 < (double)startedJobs[index] / totalJobs[index])
-						return;	
+					
+					if (index == 3 && totalJobs[index] > 100 && availabilityLevels[index] < (double)startedJobs[index] / totalJobs[index])
+						return;
 				}
 			}
 		}
 		
+		if (!isRecursiveCall && index > 1) {
+			handleJobRequestArrivalInternal(new ComplexDCFJob(job), true);
+			if (index > 2)
+				handleJobRequestArrivalInternal(new ComplexDCFJob(job), true);
+		}
+		
 		// start VM finding
 		VmContainer vmc = null;
-		vmc = getOrCreateAndStartIdealVmWithJob(job);
+		vmc = getOrCreateAndStartIdealVmWithJob(job, isRecursiveCall);
 		
 		
 		if (vmc == null)
@@ -110,9 +120,18 @@ public class HaRRJSched implements BasicJobScheduler {
 	}
 	
 	
-	private VmContainer getOrCreateAndStartIdealVmWithJob(ComplexDCFJob job){
+	private VmContainer getOrCreateAndStartIdealVmWithJob(ComplexDCFJob job, boolean isRecursiveCall){
+		double minPower = -1;
+		Collection<VmContainer> appropriateVmcs = new ArrayList<VmContainer>();
 		for (VmContainer vmc : this.vms) {
 			if (!vmc.getIsProcessingJob() && vmc.resource.getTotalProcessingPower() > job.nprocs * ExercisesBase.maxProcessingCap * timeRatio) {
+				appropriateVmcs.add(vmc);
+				if (minPower < 0 || minPower > vmc.resource.getTotalProcessingPower())
+					minPower = vmc.resource.getTotalProcessingPower();
+			}
+		}
+		for (VmContainer vmc : appropriateVmcs) {
+			if (vmc.resource.getTotalProcessingPower() <= minPower + 50){
 				vmc.setIsProcessingJob(true);
 				return vmc;
 			}
@@ -165,7 +184,7 @@ public class HaRRJSched implements BasicJobScheduler {
 		if (createdVm.getState() == State.RUNNING)
 			return new VmContainer(createdVm, true);
 		
-		createdVm.subscribeStateChange(new VmCreationHandler(this, job, rc));
+		createdVm.subscribeStateChange(new VmCreationHandler(this, job, rc, isRecursiveCall));
 		
 		/*if (createdVm.getState() == State.INITIAL_TR)
 			// wait for VM creation
@@ -275,11 +294,13 @@ public class HaRRJSched implements BasicJobScheduler {
 		private HaRRJSched scheduler;
 		private ComplexDCFJob job;
 		private ResourceConstraints rc;
+		private boolean isRecursiveCall;
 		
-		public VmCreationHandler(HaRRJSched scheduler, ComplexDCFJob job, ResourceConstraints rc) {
+		public VmCreationHandler(HaRRJSched scheduler, ComplexDCFJob job, ResourceConstraints rc, boolean isRecursiveCall) {
 			this.scheduler = scheduler;
 			this.job = job;
 			this.rc = rc;
+			this.isRecursiveCall = isRecursiveCall;
 		}
 		
 		@Override
@@ -293,7 +314,8 @@ public class HaRRJSched implements BasicJobScheduler {
 				
 				try {
 					this.job.startNowOnVM(vmc.vm, new ConsumptionEventHandler(this.scheduler, this.job, vmc));
-					startedJobs[Arrays.binarySearch(availabilityLevels, job.getAvailabilityLevel())]++;
+					if (!this.isRecursiveCall)
+						startedJobs[Arrays.binarySearch(availabilityLevels, job.getAvailabilityLevel())]++;
 					//System.out.println(index++ + " VM creation (" + job.getId() + ")");
 					
 					vm.unsubscribeStateChange(this);
