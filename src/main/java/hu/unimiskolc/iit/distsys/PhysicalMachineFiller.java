@@ -34,8 +34,8 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			Timed.simulateUntilLastEvent();
 			
 			for (PhysicalMachine pm : iaas.machines){
-				double alma = pm.freeCapacities.getRequiredCPUs();
-				System.out.println(alma);
+				double allFreeCapacity = pm.freeCapacities.getRequiredCPUs();
+				System.out.println(allFreeCapacity);
 			}
 			
 			System.out.println("-------------");
@@ -44,8 +44,8 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			Timed.simulateUntilLastEvent();
 			
 			for (PhysicalMachine pm : iaas.machines){
-				double alma = pm.freeCapacities.getRequiredCPUs();
-				System.out.println(alma);
+				double allFreeCapacity = pm.freeCapacities.getRequiredCPUs();
+				System.out.println(allFreeCapacity);
 			}
 		}
 		catch (Exception e) { }
@@ -56,24 +56,25 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 		double createdVmCount = 0;
 		
 		while (createdVmCount < vmCount){
-			double allCpu = getAllCpu(iaas);
-			double maxCpu = getMaxCpu(iaas);
-			double allPower = getAllPower(iaas);
-			double maxPower = getMaxPower(iaas);
+			
 			double neededVmsCount = vmCount - createdVmCount;
 			
-			if (allCpu >= maxCpu) {
-				double nextCpuSize = allCpu / neededVmsCount;
+			if (neededVmsCount > 10){
+				double allCpu = getAllCpu(iaas);
+				double maxCpu = getMaxCpu(iaas);
+				double nextCpuSize = allCpu / neededVmsCount * 0.8;
+				
 				nextCpuSize = nextCpuSize > maxCpu ? maxCpu : nextCpuSize;
-				double nextPower = allPower / neededVmsCount / nextCpuSize > maxPower / nextCpuSize ? maxPower / nextCpuSize : allPower / neededVmsCount / nextCpuSize;
+				PhysicalMachine minPm = getMinimalRequiredPm(iaas, nextCpuSize);
+				double ratio = nextCpuSize / minPm.freeCapacities.getRequiredCPUs();
+				double nextPower = minPm.freeCapacities.getRequiredProcessingPower() * ratio;
 				
 				VirtualMachine vms[] = null;
 				try {
-					vms = iaas.requestVM(vaRepoPair.getVa(), new ConstantConstraints(nextCpuSize, nextPower * 0.95, 1), vaRepoPair.getRepository(), 1);
+					vms = iaas.requestVM(vaRepoPair.getVa(), new ConstantConstraints(nextCpuSize, nextPower / nextCpuSize, 10), vaRepoPair.getRepository(), 1);
 					Timed.simulateUntilLastEvent();
 				}
 				catch (Exception e) {
-					allCpu++;
 				}
 				
 				if (!(vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING)) {
@@ -81,9 +82,77 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 				}
 			}
 			else {
-				allCpu++;
+				PhysicalMachine nextPm = getNextMaxFreePm(iaas);
+				if (nextPm == null){
+					vmCount--;
+					continue;
+				}
+				
+				VirtualMachine vms[] = null;
+				try {
+					vms = iaas.requestVM(vaRepoPair.getVa(),
+							new ConstantConstraints(
+									nextPm.freeCapacities.getRequiredCPUs() * nextPm.getCapacities() .getRequiredProcessingPower() / nextPm.freeCapacities .getRequiredProcessingPower(),
+									nextPm.freeCapacities.getRequiredProcessingPower(),
+									nextPm.freeCapacities.getRequiredMemory()), vaRepoPair.getRepository(),
+							1);
+					Timed.simulateUntilLastEvent();
+				}
+				catch (Exception e) {
+				}
+				
+				if (!(vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING)) {
+					createdVmCount++;
+				}
+				else {
+					vmCount--;
+				}
 			}
 		}
+		
+		System.out.println(createdVmCount);
+	}
+	
+	private PhysicalMachine getNextMaxFreePm(IaaSService iaas) {
+		/*double maxPower = getMaxPower(iaas);
+		
+		for (PhysicalMachine pm : iaas.machines) {
+			if (pm.freeCapacities.getTotalProcessingPower() >= maxPower) {
+				return pm;
+			}
+		}
+		
+		return null;*/
+		
+		
+		double maxCpu = getMaxCpu(iaas);
+		
+		for (PhysicalMachine pm : iaas.machines) {
+			if (pm.freeCapacities.getRequiredCPUs() >= maxCpu) {
+				return pm;
+			}
+		}
+		
+		return null;
+	}
+	
+	private PhysicalMachine getMinimalRequiredPm(IaaSService iaas, double minCpu) {
+		PhysicalMachine pmResult = null;
+		
+		for (PhysicalMachine pm : iaas.machines) {
+			if (pm.freeCapacities.getRequiredCPUs() >= minCpu) {
+				if (pmResult == null) {
+					pmResult = pm;
+				}
+				else {
+					if (pmResult.freeCapacities.getRequiredCPUs() > pm.freeCapacities.getRequiredCPUs()) {
+						pmResult = pm;	
+					}
+				}
+			}
+		}
+		
+		return pmResult;
 	}
 	
 	private double getAllCpu(IaaSService iaas) {
