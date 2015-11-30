@@ -61,6 +61,6 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 
 	@Override
 	public double getPerTickQuote(ResourceConstraints rc) {
-		return 0.0002;
+		return 20.0002;
 	}
 }

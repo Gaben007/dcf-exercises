@@ -24,6 +24,7 @@ package hu.unimiskolc.iit.distsys;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import org.apache.commons.lang3.RandomUtils;
 import org.junit.Assert;
@@ -124,6 +125,8 @@ public class TestPricing implements MultiCloudUser.CompletionCallback {
 
 	@Before
 	public void preparePricing() throws Exception {
+		setDependencies();
+		
 		ourService = ExercisesBase.getNewIaaSService();
 		do {
 			theCompetition = ExercisesBase.getNewIaaSService();
@@ -164,5 +167,12 @@ public class TestPricing implements MultiCloudUser.CompletionCallback {
 						+ ") should be greater than the balance of the built in provider ("
 						+ competitionAnalyser.getCurrentBalance() + ")",
 				ourAnalyser.getCurrentBalance() > competitionAnalyser.getCurrentBalance());
+	}
+	
+	public void setDependencies() throws Exception {
+		Properties p = new Properties();
+		p.setProperty("hu.unimiskolc.iit.distsys.CustomCloudProvider", "hu.unimiskolc.iit.distsys.CustomCloudProvider");
+		
+		System.setProperties(p);
 	}
 }
