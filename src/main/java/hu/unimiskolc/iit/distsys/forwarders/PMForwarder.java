@@ -38,12 +38,12 @@ public class PMForwarder extends PhysicalMachine implements ForwardingRecorder {
 	private boolean reqVMCalled = false;
 	private boolean allocVMCalled = false;
 	private boolean deployVMCalled = false;
+	private final double reliMult;
 
-	public PMForwarder(double cores, double perCorePocessing, long memory,
-			Repository disk, int onD, int offD,
-			EnumMap<PowerStateKind, EnumMap<State, PowerState>> powerTransitions) {
-		super(cores, perCorePocessing, memory, disk, onD, offD,
-				powerTransitions);
+	public PMForwarder(double cores, double perCorePocessing, long memory, Repository disk, int onD, int offD,
+			EnumMap<PowerStateKind, EnumMap<State, PowerState>> powerTransitions, double reliMult) {
+		super(cores, perCorePocessing, memory, disk, onD, offD, powerTransitions);
+		this.reliMult = reliMult;
 	}
 
 	public void resetForwardingData() {
@@ -64,40 +64,37 @@ public class PMForwarder extends PhysicalMachine implements ForwardingRecorder {
 		return allocVMCalled;
 	}
 
+	public double getReliMult() {
+		return reliMult;
+	}
+
 	@Override
-	public VirtualMachine[] requestVM(VirtualAppliance va,
-			ResourceConstraints rc, Repository vaSource, int count)
-			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException,
-			NetworkException {
+	public VirtualMachine[] requestVM(VirtualAppliance va, ResourceConstraints rc, Repository vaSource, int count)
+			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException, NetworkException {
 		reqVMCalled = true;
 		return super.requestVM(va, rc, vaSource, count);
 	}
 
 	@Override
-	public VirtualMachine[] requestVM(VirtualAppliance va,
-			ResourceConstraints rc, Repository vaSource, int count,
+	public VirtualMachine[] requestVM(VirtualAppliance va, ResourceConstraints rc, Repository vaSource, int count,
 			HashMap<String, Object> schedulingConstraints)
-			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException,
-			NetworkException {
+					throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException, NetworkException {
 		reqVMCalled = true;
 		return super.requestVM(va, rc, vaSource, count, schedulingConstraints);
 	}
 
 	@Override
-	public void deployVM(VirtualMachine vm, ResourceAllocation ra,
-			Repository vaSource)
-			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException,
-			NetworkException {
+	public void deployVM(VirtualMachine vm, ResourceAllocation ra, Repository vaSource)
+			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException, NetworkException {
 		deployVMCalled = true;
 		super.deployVM(vm, ra, vaSource);
 	}
 
 	@Override
-	public ResourceAllocation allocateResources(ResourceConstraints requested,
-			boolean strict, int allocationValidityLength)
-			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException {
+	public ResourceAllocation allocateResources(ResourceConstraints requested, boolean strict,
+			int allocationValidityLength)
+					throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException {
 		allocVMCalled = true;
-		return super.allocateResources(requested, strict,
-				allocationValidityLength);
+		return super.allocateResources(requested, strict, allocationValidityLength);
 	}
 }

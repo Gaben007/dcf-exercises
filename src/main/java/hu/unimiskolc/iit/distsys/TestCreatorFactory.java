@@ -24,6 +24,7 @@
 package hu.unimiskolc.iit.distsys;
 
 import hu.unimiskolc.iit.distsys.interfaces.BasicJobScheduler;
+import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 import hu.unimiskolc.iit.distsys.interfaces.FillInAllPMs;
 import hu.unimiskolc.iit.distsys.interfaces.VMCreationApproaches;
 
@@ -41,7 +42,13 @@ public class TestCreatorFactory {
 
 	public static FillInAllPMs getPMFiller()
 			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-		return (FillInAllPMs) Class.forName(System.getProperty("hu.unimiskolc.iit.distsys.PMFiller"))
+		return (FillInAllPMs) Class.forName(System.getProperty("hu.unimiskolc.iit.distsys.PMFiller")).newInstance();
+	}
+
+	public static CloudProvider getNewProvider()
+			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		return (CloudProvider) Class.forName(System.getProperty("hu.unimiskolc.iit.distsys.CustomCloudProvider"))
 				.newInstance();
 	}
+
 }

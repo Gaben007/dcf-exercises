@@ -36,14 +36,45 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 
 public class IaaSForwarder extends IaaSService implements ForwardingRecorder {
-	private boolean reqVMcalled = false;
+	public interface VMListener {
+		void newVMadded(VirtualMachine[] vms);
+	}
 
-	public IaaSForwarder(Class<? extends Scheduler> s,
-			Class<? extends PhysicalMachineController> c)
-			throws IllegalArgumentException, SecurityException,
-			InstantiationException, IllegalAccessException,
+	public interface QuoteProvider {
+		/**
+		 * 
+		 * @param rc
+		 *            if null then the default instance price should be returned
+		 * @return
+		 */
+		double getPerTickQuote(ResourceConstraints rc);
+	}
+
+	private boolean reqVMcalled = false;
+	private VMListener notifyMe = null;
+	private QuoteProvider qp = new QuoteProvider() {
+		@Override
+		public double getPerTickQuote(ResourceConstraints rc) {
+			return 1;
+		}
+	};
+
+	public IaaSForwarder(Class<? extends Scheduler> s, Class<? extends PhysicalMachineController> c)
+			throws IllegalArgumentException, SecurityException, InstantiationException, IllegalAccessException,
 			InvocationTargetException, NoSuchMethodException {
 		super(s, c);
+	}
+
+	public void setVMListener(VMListener newListener) {
+		notifyMe = newListener;
+	}
+
+	public void setQuoteProvider(QuoteProvider qp) {
+		this.qp = qp;
+	}
+
+	public double getResourceQuote(ResourceConstraints rc) {
+		return qp.getPerTickQuote(rc);
 	}
 
 	public void resetForwardingData() {
@@ -55,21 +86,24 @@ public class IaaSForwarder extends IaaSService implements ForwardingRecorder {
 	}
 
 	@Override
-	public VirtualMachine[] requestVM(VirtualAppliance va,
-			ResourceConstraints rc, Repository vaSource, int count)
-			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException,
-			NetworkException {
+	public VirtualMachine[] requestVM(VirtualAppliance va, ResourceConstraints rc, Repository vaSource, int count)
+			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException, NetworkException {
 		reqVMcalled = true;
-		return super.requestVM(va, rc, vaSource, count);
+		return notifyVMListeners(super.requestVM(va, rc, vaSource, count));
 	}
 
 	@Override
-	public VirtualMachine[] requestVM(VirtualAppliance va,
-			ResourceConstraints rc, Repository vaSource, int count,
+	public VirtualMachine[] requestVM(VirtualAppliance va, ResourceConstraints rc, Repository vaSource, int count,
 			HashMap<String, Object> schedulingConstraints)
-			throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException,
-			NetworkException {
+					throws hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager.VMManagementException, NetworkException {
 		reqVMcalled = true;
-		return super.requestVM(va, rc, vaSource, count, schedulingConstraints);
+		return notifyVMListeners(super.requestVM(va, rc, vaSource, count, schedulingConstraints));
+	}
+
+	private VirtualMachine[] notifyVMListeners(VirtualMachine[] received) {
+		if (notifyMe != null) {
+			notifyMe.newVMadded(received);
+		}
+		return received;
 	}
 }

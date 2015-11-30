@@ -123,6 +123,25 @@ public class ExercisesBase {
 	 */
 	public static PhysicalMachine getNewPhysicalMachine()
 			throws SecurityException, InstantiationException, IllegalAccessException, NoSuchFieldException {
+		return getNewPhysicalMachine(1);
+	}
+
+	/**
+	 * Generates a random physical machine (and registers it in the network),
+	 * the generated PM is going to have resources within the limits of the
+	 * class wide constants
+	 * 
+	 * @param reliMult
+	 *            Determines the level of reliability the particular Physical
+	 *            machine is expected to show.
+	 * @return
+	 * @throws SecurityException
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws NoSuchFieldException
+	 */
+	public static PhysicalMachine getNewPhysicalMachine(final double reliMult)
+			throws SecurityException, InstantiationException, IllegalAccessException, NoSuchFieldException {
 		double idlePower = RandomUtils.nextDouble(minIdlePower, maxIdlePower);
 		double realMinMaxPower = Math.max(idlePower, minMaxPower);
 		PMForwarder f = new PMForwarder((double) RandomUtils.nextInt(1, maxCoreCount),
@@ -130,7 +149,8 @@ public class ExercisesBase {
 				getNewRepository(1), SeedSyncer.centralRnd.nextInt(maxOnDelay),
 				SeedSyncer.centralRnd.nextInt(maxOffDelay),
 				PowerTransitionGenerator.generateTransitions(RandomUtils.nextDouble(minMinPower, maxMinPower),
-						idlePower, RandomUtils.nextDouble(realMinMaxPower, maxMaxPower), 30, 40));
+						idlePower, RandomUtils.nextDouble(realMinMaxPower, maxMaxPower), 30, 40),
+				reliMult);
 		pmfs.add(f);
 		return f;
 	}

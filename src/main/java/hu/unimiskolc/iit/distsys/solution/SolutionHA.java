@@ -37,8 +37,8 @@ import hu.mta.sztaki.lpds.cloud.simulator.iaas.resourcemodel.ResourceConsumption
 import hu.mta.sztaki.lpds.cloud.simulator.io.Repository;
 import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
 import hu.unimiskolc.iit.distsys.ComplexDCFJob;
+import hu.unimiskolc.iit.distsys.Constants;
 import hu.unimiskolc.iit.distsys.ExercisesBase;
-import hu.unimiskolc.iit.distsys.TestHighAvailability;
 import hu.unimiskolc.iit.distsys.interfaces.BasicJobScheduler;
 
 /**
@@ -73,7 +73,7 @@ public class SolutionHA implements BasicJobScheduler, VirtualMachine.StateChange
 	public void handleJobRequestArrival(final Job j) {
 		final ComplexDCFJob cdj = (ComplexDCFJob) j;
 		cdj.getAvailabilityLevel();
-		int vmcount = parallelVMs[Arrays.binarySearch(TestHighAvailability.availabilityLevels,
+		int vmcount = parallelVMs[Arrays.binarySearch(Constants.availabilityLevels,
 				cdj.getAvailabilityLevel())];
 		final ConstantConstraints cc = new ConstantConstraints(j.nprocs, ExercisesBase.minProcessingCap,
 				ExercisesBase.minMem / j.nprocs);

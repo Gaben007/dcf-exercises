@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ComplexDCFJob extends DCFJob implements ConsumptionEvent {
-	private static int completeCount=0;
+	private static int completeCount = 0;
 	private static HashMap<VirtualMachine, DeferredEvent> vmMarkers = new HashMap<VirtualMachine, DeferredEvent>();
 	private static HashMap<String, ArrayList<ComplexDCFJob>> coupledJobs = new HashMap<String, ArrayList<ComplexDCFJob>>();
 	private static int failingVMCounter = 0;
@@ -230,9 +230,12 @@ public class ComplexDCFJob extends DCFJob implements ConsumptionEvent {
 	public static int getVmReuseCount() {
 		return vmReuseCount;
 	}
-	
+
 	public static int getCompleteCount() {
 		return completeCount;
 	}
 
+	public VirtualMachine getMyVM() {
+		return myVM;
+	}
 }
