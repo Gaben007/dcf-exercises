@@ -130,6 +130,7 @@ public class TestRoundRobinJobSched {
 	private void setDependencies() throws Exception {
 		Properties p = new Properties();
 		p.setProperty("hu.unimiskolc.iit.distsys.PMFiller", "hu.unimiskolc.iit.distsys.PhysicalMachineFiller");
+		//p.setProperty("hu.unimiskolc.iit.distsys.PMFiller", "hu.unimiskolc.iit.distsys.solution.SolutionFiller");
 		
 		System.setProperties(p);
 	}

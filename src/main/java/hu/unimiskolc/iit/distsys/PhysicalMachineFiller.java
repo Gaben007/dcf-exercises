@@ -43,6 +43,8 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			createVirtualMachines(iaas, vaRepoPair, vmCount);
 			Timed.simulateUntilLastEvent();
 			
+			System.out.println("-------------");
+			
 			for (PhysicalMachine pm : iaas.machines){
 				double allFreeCapacity = pm.freeCapacities.getRequiredCPUs();
 				System.out.println(allFreeCapacity);
@@ -59,7 +61,7 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			
 			double neededVmsCount = vmCount - createdVmCount;
 			
-			if (neededVmsCount > 10){
+			if (neededVmsCount > iaas.machines.size()){
 				double allCpu = getAllCpu(iaas);
 				double maxCpu = getMaxCpu(iaas);
 				double nextCpuSize = allCpu / neededVmsCount * 0.8;
@@ -71,7 +73,12 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 				
 				VirtualMachine vms[] = null;
 				try {
-					vms = iaas.requestVM(vaRepoPair.getVa(), new ConstantConstraints(nextCpuSize, nextPower / nextCpuSize, 10), vaRepoPair.getRepository(), 1);
+					vms = iaas.requestVM(vaRepoPair.getVa(),
+							new ConstantConstraints(
+								nextCpuSize * 0.99,
+								nextPower / nextCpuSize,
+								10),
+							vaRepoPair.getRepository(), 1);
 					Timed.simulateUntilLastEvent();
 				}
 				catch (Exception e) {
@@ -84,51 +91,57 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 			else {
 				PhysicalMachine nextPm = getNextMaxFreePm(iaas);
 				if (nextPm == null){
-					vmCount--;
-					continue;
+					System.out.println("There is no enough PM.");
+					System.out.println(createdVmCount);
+					return;
 				}
 				
 				VirtualMachine vms[] = null;
-				try {
-					vms = iaas.requestVM(vaRepoPair.getVa(),
-							new ConstantConstraints(
-									nextPm.freeCapacities.getRequiredCPUs() * nextPm.getCapacities() .getRequiredProcessingPower() / nextPm.freeCapacities .getRequiredProcessingPower(),
-									nextPm.freeCapacities.getRequiredProcessingPower(),
-									nextPm.freeCapacities.getRequiredMemory()), vaRepoPair.getRepository(),
-							1);
-					Timed.simulateUntilLastEvent();
-				}
-				catch (Exception e) {
-				}
+				double ratio = nextPm.getCapacities().getRequiredProcessingPower() / nextPm.freeCapacities.getRequiredProcessingPower();
 				
-				if (!(vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING)) {
-					createdVmCount++;
-				}
-				else {
-					vmCount--;
+				for (int i = 0; i < 10; i++)
+				{
+					try {
+						vms = iaas.requestVM(vaRepoPair.getVa(),
+								new ConstantConstraints(
+										nextPm.freeCapacities.getRequiredCPUs() * ratio,
+										nextPm.freeCapacities.getRequiredProcessingPower() * ratio,
+										nextPm.freeCapacities.getRequiredMemory() / 2
+								),
+								vaRepoPair.getRepository(), 1);
+						
+						Timed.simulateUntilLastEvent();
+					}
+					catch (Exception e) {
+					}
+					
+					if (!(vms == null || vms.length == 0 || vms[0] == null || vms[0].getState() != State.RUNNING)) {
+						createdVmCount++;
+						break;
+					}
+					else {
+						System.out.println(i + " VM creation was failed.");
+						System.out.println(nextPm.freeCapacities.getRequiredCPUs());
+						System.out.println(nextPm.freeCapacities.getRequiredCPUs() * ratio);
+						System.out.println(ratio);
+						System.out.println(nextPm.getCapacities().getRequiredProcessingPower() / nextPm.freeCapacities.getRequiredProcessingPower());
+						if (i == 9)
+							vmCount--;
+						else
+							ratio = ratio <= 1 ? ratio * 0.99 : 1.0;
+					}
 				}
 			}
 		}
 		
-		System.out.println(createdVmCount);
+		System.out.println("Created: " + createdVmCount);
 	}
 	
 	private PhysicalMachine getNextMaxFreePm(IaaSService iaas) {
-		/*double maxPower = getMaxPower(iaas);
+		double maxPower = getMaxPower(iaas);
 		
 		for (PhysicalMachine pm : iaas.machines) {
 			if (pm.freeCapacities.getTotalProcessingPower() >= maxPower) {
-				return pm;
-			}
-		}
-		
-		return null;*/
-		
-		
-		double maxCpu = getMaxCpu(iaas);
-		
-		for (PhysicalMachine pm : iaas.machines) {
-			if (pm.freeCapacities.getRequiredCPUs() >= maxCpu) {
 				return pm;
 			}
 		}
@@ -166,22 +179,12 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 	}
 	
 	private double getMaxCpu(IaaSService iaas) {
-		double result = 0;
+		double result = -1;
 		
 		for (PhysicalMachine pm : iaas.machines) {
 			if (result < pm.freeCapacities.getRequiredCPUs()){
 				result = pm.freeCapacities.getRequiredCPUs();
 			}
-		}
-		
-		return result;
-	}
-	
-	private double getAllPower(IaaSService iaas) {
-		double result = 0;
-		
-		for (PhysicalMachine pm : iaas.machines) {
-			result += pm.freeCapacities.getTotalProcessingPower();
 		}
 		
 		return result;
@@ -209,58 +212,8 @@ public class PhysicalMachineFiller implements FillInAllPMs {
 		return null;
 	}
 	
-	private ArrayList<VirtualMachine> requestSpecifiedVM(IaaSService iaas, VaRepoContainer vaRepoPair, VmRequester vmCreationRequests)throws Exception{
-		ArrayList<VirtualMachine> results = new ArrayList<VirtualMachine>();
-		
-		for (VmRequest request : vmCreationRequests.getOrderedRequests()){
-			results.addAll(Arrays.asList(iaas.requestVM(vaRepoPair.getVa(), request.rc, vaRepoPair.getRepository(), request.count)));
-		}
-		
-		return results;
-	}
-	
 	
 	// Private methods
-	private class VmRequester {
-		private ArrayList<VmRequest> requests;
-		
-		public VmRequester() {
-			this.requests = new ArrayList<VmRequest>();
-		}
-
-		public void addRequest(VmRequest request) {
-			this.requests.add(request);
-		}
-		
-		public ArrayList<VmRequest> getOrderedRequests() {
-			ArrayList<VmRequest> result = (ArrayList<VmRequest>)this.requests.clone();
-			Collections.sort(result, Collections.reverseOrder());
-			return result;
-		}
-	}
-	
-	private class VmRequest implements Comparable<VmRequest>{
-		ResourceConstraints rc;
-		int count;
-		
-		public VmRequest(ResourceConstraints rc, int count){
-			this.rc = rc;
-			this.count = count;
-		}
-
-		@Override
-		public int compareTo(VmRequest arg0) {
-			double sCpu = this.rc.getRequiredCPUs();
-			double tCpu = arg0.rc.getRequiredCPUs();
-			
-			if (sCpu == tCpu)
-				return 0;
-			if (sCpu > tCpu)
-				return 1;
-			return -1;
-		}
-	}
-	
 	private class VaRepoContainer {
 		private Repository repo;
 		private VirtualAppliance va;
