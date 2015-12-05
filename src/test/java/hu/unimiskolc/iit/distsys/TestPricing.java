@@ -167,6 +167,14 @@ public class TestPricing implements MultiCloudUser.CompletionCallback {
 						+ ") should be greater than the balance of the built in provider ("
 						+ competitionAnalyser.getCurrentBalance() + ")",
 				ourAnalyser.getCurrentBalance() > competitionAnalyser.getCurrentBalance());
+		
+		System.out.println("Balance: " + ourAnalyser.getCurrentBalance());
+		System.out.println("All request: " + CustomCloudProvider.allRequest);
+		System.out.println("Proc ocunt: " + CustomCloudProvider.maxProcessor);
+		System.out.println("All proc ocunt: " + CustomCloudProvider.allProcessor);
+		System.out.println("Avg proc ocunt: " + CustomCloudProvider.allProcessor / CustomCloudProvider.allRequest);
+		System.out.println("Power per proc: " + CustomCloudProvider.maxPowerPerProc);
+		System.out.println("Sum power: " + CustomCloudProvider.maxPower);
 	}
 	
 	public void setDependencies() throws Exception {
