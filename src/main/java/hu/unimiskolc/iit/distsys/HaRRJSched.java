@@ -30,6 +30,7 @@ public class HaRRJSched implements BasicJobScheduler {
 	public static int nullResourceFound = 0;
 	
 	private static final double[] availabilityLevels = { 0.75, 0.9, 0.95, 0.99 };
+	public static final int[] parallelVMs = { 2, 3, 5, 14 };
 	private static final int[] startedJobs = { 0, 0, 0, 0};
 	private static final int[] successJobs = { 0, 0, 0, 0};
 	private static final int[] totalJobs = { 0, 0, 0, 0};
@@ -89,8 +90,7 @@ public class HaRRJSched implements BasicJobScheduler {
 		}
 		
 		if (!isRecursiveCall && index > 1) {
-			handleJobRequestArrivalInternal(new ComplexDCFJob(job), true);
-			if (index > 2)
+			for (int i = 0; i < parallelVMs[index]; i++)
 				handleJobRequestArrivalInternal(new ComplexDCFJob(job), true);
 		}
 		
@@ -167,7 +167,7 @@ public class HaRRJSched implements BasicJobScheduler {
 			createdVms = iaas.requestVM(vaRepo.getVa(), rc, vaRepo.getRepository(), 1);
 		}
 		catch (Exception e) {
-			System.out.println("Error: 1");
+			System.out.println("Error: 1 " + e.getMessage());
 			return null;
 		}
 		
@@ -385,7 +385,7 @@ public class HaRRJSched implements BasicJobScheduler {
 			}
 			
 			this.isRestarted = true;
-			this.scheduler.handleJobRequestArrivalInternal(new ComplexDCFJob(this.job), true);
+			//this.scheduler.handleJobRequestArrivalInternal(new ComplexDCFJob(this.job), true);
 		}
 	}
 }
