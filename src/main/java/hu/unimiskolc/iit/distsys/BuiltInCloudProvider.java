@@ -54,7 +54,7 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 		myProvidedService = iaas;
 		myProvidedService.subscribeToCapacityChanges(this);
 		((IaaSForwarder) myProvidedService).setQuoteProvider(this);
-		((IaaSForwarder) myProvidedService).setVMListener(this);
+		//((IaaSForwarder) myProvidedService).setVMListener(this);
 	}
 
 	@Override
@@ -80,11 +80,12 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 		allProcessor += rc.getRequiredCPUs();
 		sumProc += rc.getRequiredCPUs();
 		allRequest++;
-		double effectiveness = myProvidedService.getRunningCapacities().getTotalProcessingPower() / myProvidedService.getCapacities().getTotalProcessingPower();
+		//double effectiveness = myProvidedService.getRunningCapacities().getTotalProcessingPower() / myProvidedService.getCapacities().getTotalProcessingPower();
+		double effectiveness = 1 - (getFreeCapacities() / getTotalCapacities());
 		sumEffectiveness += effectiveness;
 		
-		//double result = rc.getRequiredCPUs() * 0.0000049999;
-		double result = 0.002;
+		double result = rc.getRequiredCPUs() * 0.000015;
+		//double result = 0.0002;
 		
 		sumRequestResults += result / rc.getRequiredCPUs();
 		return result;
@@ -94,5 +95,20 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 	public void newVMadded(VirtualMachine[] vms) {
 		requestedVmsCount += vms.length;
 		vmRequestCount++;
+	}
+	
+	private double getTotalCapacities(){
+		double result = 0;
+		for (PhysicalMachine pm : myProvidedService.machines) {
+			result += pm.getCapacities().getRequiredCPUs();
+		}
+		return result;
+	}
+	private double getFreeCapacities(){
+		double result = 0;
+		for (PhysicalMachine pm : myProvidedService.machines) {
+			result += pm.availableCapacities.getRequiredCPUs();
+		}
+		return result;
 	}
 }

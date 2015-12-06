@@ -14,7 +14,8 @@ import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 
 public class CustomCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine>, IaaSForwarder.VMListener {
 	private IaaSService myProvidedService;
-	private static double basicPrice = 0.0019105; 
+	private static double basicPrice = 0.00002;
+	private static double requiredprofitRate = 1.0;
 	
 	public static double maxProcessor = 0;
 	public static double maxPower = 0;
@@ -40,7 +41,9 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		//return rc.getTotalProcessingPower() * 0.00000000002;
 		//return rc.getRequiredCPUs() * 0.00005;
 		
-		double effectiveness = myProvidedService.getRunningCapacities().getTotalProcessingPower() / myProvidedService.getCapacities().getTotalProcessingPower();
+		//double effectiveness = myProvidedService.getRunningCapacities().getTotalProcessingPower() / myProvidedService.getCapacities().getTotalProcessingPower();
+		double effectiveness = 1 - (getFreeCapacities() / getTotalCapacities());
+		
 		double effectivenessBasedDiscount = getEffectivenessBasedDiscount(effectiveness);
 		double procCountBasedDiscount = getProcCountBasedDiscount(rc.getRequiredCPUs());
 		double successSeelcetionRate = vmRequestCount / allRequest;
@@ -50,51 +53,65 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 			successSeelcetionRate = 1.0;
 			
 		
-		double result = rc.getRequiredCPUs() * basicPrice;// * effectivenessBasedDiscount * procCountBasedDiscount * successSeelcetionRate;
+		double result = rc.getRequiredCPUs() * basicPrice * effectivenessBasedDiscount * procCountBasedDiscount * requiredprofitRate;// * successSeelcetionRate;
 		sumRequestResults += result / rc.getRequiredCPUs();
 		sumEffectiveness += effectiveness;
 		return result;
-		//return rc.getRequiredCPUs() * basicPrice;
+	}
+	
+	private double getTotalCapacities(){
+		double result = 0;
+		for (PhysicalMachine pm : myProvidedService.machines) {
+			result += pm.getCapacities().getRequiredCPUs();
+		}
+		return result;
+	}
+	private double getFreeCapacities(){
+		double result = 0;
+		for (PhysicalMachine pm : myProvidedService.machines) {
+			result += pm.availableCapacities.getRequiredCPUs();
+		}
+		return result;
 	}
 	
 	private double getEffectivenessBasedDiscount(double effectiveness) {
 		
 		if (effectiveness < 0.001)
-			return 0.01;
+			return 0.5;
 		
 		if (effectiveness < 0.10)
-			return 1.8;
+			return 0.8;
 		
 		if (effectiveness < 0.30)
-			return 1.4;
-		
-		if (effectiveness < 0.50)
-			return 1.2;
-		
-		if (effectiveness < 0.70)
-			return 1.0;
-		
-		if (effectiveness > 0.90)
 			return 0.9;
 		
+		if (effectiveness < 0.50)
+			return 1.0;
+		
+		if (effectiveness < 0.80)
+			return 0.9;
+		
+		if (effectiveness > 0.90)
+			return 1.2;
+		
 		if (effectiveness > 0.80)
-			return 0.95;
+			return 1.1;
 		
 		return 1.0;
 	}
 	
 	private double getProcCountBasedDiscount(double procCount) {
 		if (procCount > 30)
-			return 0.6;
-		
-		if (procCount > 10)
-			return 0.7;
-		
-		if (procCount > 5)
 			return 0.8;
 		
+		if (procCount > 10)
+			return 0.6;
+		
+		if (procCount > 5)
+			return 0.75;
+		
 		if (procCount > 3)
-			return 0.9;
+			return 0.85;
 		
 		return 1.0;
 	}
@@ -104,7 +121,7 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		myProvidedService = iaas;
 		myProvidedService.subscribeToCapacityChanges(this);
 		((IaaSForwarder) myProvidedService).setQuoteProvider(this);
-		((IaaSForwarder) myProvidedService).setVMListener(this);
+		//((IaaSForwarder) myProvidedService).setVMListener(this);
 	}
 
 	@Override
