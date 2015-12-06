@@ -159,6 +159,38 @@ public class TestPricing implements MultiCloudUser.CompletionCallback {
 	@Test(timeout = 60000)
 	public void thePricingTest() throws Exception {
 		Timed.simulateUntilLastEvent();
+		
+		System.out.println("Balance: " + ourAnalyser.getCurrentBalance());
+		System.out.println("Total earnings: " + ourAnalyser.getTotalEarnings());
+		System.out.println("Total costs: " + ourAnalyser.getTotalCosts());
+		System.out.println("All request: " + CustomCloudProvider.allRequest);
+		System.out.println("Proc ocunt: " + CustomCloudProvider.maxProcessor);
+		System.out.println("All proc ocunt: " + CustomCloudProvider.allProcessor);
+		System.out.println("Avg proc ocunt: " + CustomCloudProvider.allProcessor / CustomCloudProvider.allRequest);
+		System.out.println("Power per proc: " + CustomCloudProvider.maxPowerPerProc);
+		System.out.println("Sum power: " + CustomCloudProvider.maxPower);
+		System.out.println("All created VM count: " + CustomCloudProvider.requestedVmsCount);
+		System.out.println("VM reuest count: " + CustomCloudProvider.vmRequestCount);
+		System.out.println("Avg proc: " + CustomCloudProvider.sumProc / CustomCloudProvider.allRequest);
+		System.out.println("Avg effectiveness: " + CustomCloudProvider.sumEffectiveness / CustomCloudProvider.allRequest);
+		System.out.println("Avg price: " + CustomCloudProvider.sumRequestResults / CustomCloudProvider.allRequest);
+		System.out.println("Bought PMs: " + CustomCloudProvider.newPmCount);
+		System.out.println("----------------------------------");
+		System.out.println("Balance: " + competitionAnalyser.getCurrentBalance());
+		System.out.println("Total earnings: " + competitionAnalyser.getTotalEarnings());
+		System.out.println("Total costs: " + competitionAnalyser.getTotalCosts());
+		System.out.println("All request: " + BuiltInCloudProvider.allRequest);
+		System.out.println("Proc ocunt: " + BuiltInCloudProvider.maxProcessor);
+		System.out.println("All proc ocunt: " + BuiltInCloudProvider.allProcessor);
+		System.out.println("Avg proc ocunt: " + BuiltInCloudProvider.allProcessor / CustomCloudProvider.allRequest);
+		System.out.println("Power per proc: " + BuiltInCloudProvider.maxPowerPerProc);
+		System.out.println("Sum power: " + BuiltInCloudProvider.maxPower);
+		System.out.println("All created VM count: " + BuiltInCloudProvider.requestedVmsCount);
+		System.out.println("VM reuest count: " + BuiltInCloudProvider.vmRequestCount);
+		System.out.println("Avg proc: " + BuiltInCloudProvider.sumProc / CustomCloudProvider.allRequest);
+		System.out.println("Avg effectiveness: " + BuiltInCloudProvider.sumEffectiveness / CustomCloudProvider.allRequest);
+		System.out.println("Avg price: " + BuiltInCloudProvider.sumRequestResults / CustomCloudProvider.allRequest);
+		
 		Assert.assertTrue(
 				"The final balance of the provider should be positive but was: " + ourAnalyser.getCurrentBalance(),
 				ourAnalyser.getCurrentBalance() > 0);
@@ -167,14 +199,6 @@ public class TestPricing implements MultiCloudUser.CompletionCallback {
 						+ ") should be greater than the balance of the built in provider ("
 						+ competitionAnalyser.getCurrentBalance() + ")",
 				ourAnalyser.getCurrentBalance() > competitionAnalyser.getCurrentBalance());
-		
-		System.out.println("Balance: " + ourAnalyser.getCurrentBalance());
-		System.out.println("All request: " + CustomCloudProvider.allRequest);
-		System.out.println("Proc ocunt: " + CustomCloudProvider.maxProcessor);
-		System.out.println("All proc ocunt: " + CustomCloudProvider.allProcessor);
-		System.out.println("Avg proc ocunt: " + CustomCloudProvider.allProcessor / CustomCloudProvider.allRequest);
-		System.out.println("Power per proc: " + CustomCloudProvider.maxPowerPerProc);
-		System.out.println("Sum power: " + CustomCloudProvider.maxPower);
 	}
 	
 	public void setDependencies() throws Exception {

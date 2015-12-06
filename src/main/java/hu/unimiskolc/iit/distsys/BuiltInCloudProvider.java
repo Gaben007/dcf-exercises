@@ -30,18 +30,31 @@ import org.apache.commons.lang3.RandomUtils;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.PhysicalMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager;
+import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.constraints.ResourceConstraints;
 import hu.unimiskolc.iit.distsys.forwarders.IaaSForwarder;
 import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 
-public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine> {
+public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine>, IaaSForwarder.VMListener {
 	IaaSService myProvidedService;
+	
+	public static double maxProcessor = 0;
+	public static double maxPower = 0;
+	public static double maxPowerPerProc = 0;
+	public static double allProcessor = 0;
+	public static double allRequest = 0;
+	public static double requestedVmsCount = 0;
+	public static double vmRequestCount = 0;
+	public static double sumRequestResults = 0;
+	public static double sumEffectiveness = 0;
+	public static double sumProc = 0;
 
 	@Override
 	public void setIaaSService(IaaSService iaas) {
 		myProvidedService = iaas;
 		myProvidedService.subscribeToCapacityChanges(this);
 		((IaaSForwarder) myProvidedService).setQuoteProvider(this);
+		((IaaSForwarder) myProvidedService).setVMListener(this);
 	}
 
 	@Override
@@ -61,6 +74,25 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 
 	@Override
 	public double getPerTickQuote(ResourceConstraints rc) {
-		return 20.0002;
+		maxProcessor = Math.max(rc.getRequiredCPUs(), maxProcessor);
+		maxPower = Math.max(rc.getTotalProcessingPower(), maxPower);
+		maxPowerPerProc = Math.max(rc.getRequiredProcessingPower(), maxPowerPerProc);
+		allProcessor += rc.getRequiredCPUs();
+		sumProc += rc.getRequiredCPUs();
+		allRequest++;
+		double effectiveness = myProvidedService.getRunningCapacities().getTotalProcessingPower() / myProvidedService.getCapacities().getTotalProcessingPower();
+		sumEffectiveness += effectiveness;
+		
+		//double result = rc.getRequiredCPUs() * 0.0000049999;
+		double result = 0.002;
+		
+		sumRequestResults += result / rc.getRequiredCPUs();
+		return result;
+	}
+
+	@Override
+	public void newVMadded(VirtualMachine[] vms) {
+		requestedVmsCount += vms.length;
+		vmRequestCount++;
 	}
 }

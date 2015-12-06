@@ -7,64 +7,88 @@ import org.apache.commons.lang3.RandomUtils;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.PhysicalMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VMManager;
+import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.constraints.ResourceConstraints;
 import hu.unimiskolc.iit.distsys.forwarders.IaaSForwarder;
 import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 
-public class CustomCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine> {
+public class CustomCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine>, IaaSForwarder.VMListener {
 	private IaaSService myProvidedService;
-	private CostAnalyserandPricer analyzer;
+	private static double basicPrice = 0.0019105; 
 	
 	public static double maxProcessor = 0;
 	public static double maxPower = 0;
 	public static double maxPowerPerProc = 0;
 	public static double allProcessor = 0;
 	public static double allRequest = 0;
+	public static double requestedVmsCount = 0;
+	public static double vmRequestCount = 0;
+	public static double sumRequestResults = 0;
+	public static double sumEffectiveness = 0;
+	public static double sumProc = 0;
+	public static double newPmCount = 0;
 
 	@Override
 	public double getPerTickQuote(ResourceConstraints rc) {
 		maxProcessor = Math.max(rc.getRequiredCPUs(), maxProcessor);
 		maxPower = Math.max(rc.getTotalProcessingPower(), maxPower);
 		maxPowerPerProc = Math.max(rc.getRequiredProcessingPower(), maxPowerPerProc);
+		sumProc += rc.getRequiredCPUs();
 		allProcessor += rc.getRequiredCPUs();
 		allRequest++;
-		//sumBalance += analyzer.getCurrentBalance();
 		//return rc.getTotalProcessingPower() * 0.00000000001;
 		//return rc.getTotalProcessingPower() * 0.00000000002;
-		//return rc.getRequiredCPUs() * 0.000005;
+		//return rc.getRequiredCPUs() * 0.00005;
 		
 		double effectiveness = myProvidedService.getRunningCapacities().getTotalProcessingPower() / myProvidedService.getCapacities().getTotalProcessingPower();
-		double effectivenessBasedPrice = getEffectivenessBasedPerProcPrice(effectiveness);
+		double effectivenessBasedDiscount = getEffectivenessBasedDiscount(effectiveness);
 		double procCountBasedDiscount = getProcCountBasedDiscount(rc.getRequiredCPUs());
+		double successSeelcetionRate = vmRequestCount / allRequest;
+		if (successSeelcetionRate < 0.8)
+			successSeelcetionRate = 0.8;
+		else if (successSeelcetionRate > 1.0)
+			successSeelcetionRate = 1.0;
+			
 		
-		return rc.getRequiredCPUs() * effectivenessBasedPrice * procCountBasedDiscount;
+		double result = rc.getRequiredCPUs() * basicPrice;// * effectivenessBasedDiscount * procCountBasedDiscount * successSeelcetionRate;
+		sumRequestResults += result / rc.getRequiredCPUs();
+		sumEffectiveness += effectiveness;
+		return result;
+		//return rc.getRequiredCPUs() * basicPrice;
 	}
 	
-	private double getEffectivenessBasedPerProcPrice(double effectiveness) {
-		if (effectiveness < 0.03)
-			return 0;
+	private double getEffectivenessBasedDiscount(double effectiveness) {
+		
+		if (effectiveness < 0.001)
+			return 0.01;
 		
 		if (effectiveness < 0.10)
-			return 0.000005;
+			return 1.8;
 		
 		if (effectiveness < 0.30)
-			return 0.0005;
+			return 1.4;
+		
+		if (effectiveness < 0.50)
+			return 1.2;
+		
+		if (effectiveness < 0.70)
+			return 1.0;
 		
 		if (effectiveness > 0.90)
-			return 0.05;
+			return 0.9;
 		
 		if (effectiveness > 0.80)
-			return 0.005;
+			return 0.95;
 		
-		return 0.000001 * (1 - effectiveness);
+		return 1.0;
 	}
 	
 	private double getProcCountBasedDiscount(double procCount) {
 		if (procCount > 30)
-			return 0.3;
+			return 0.6;
 		
 		if (procCount > 10)
-			return 0.5;
+			return 0.7;
 		
 		if (procCount > 5)
 			return 0.8;
@@ -80,6 +104,7 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		myProvidedService = iaas;
 		myProvidedService.subscribeToCapacityChanges(this);
 		((IaaSForwarder) myProvidedService).setQuoteProvider(this);
+		((IaaSForwarder) myProvidedService).setVMListener(this);
 	}
 
 	@Override
@@ -90,10 +115,17 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 				for (PhysicalMachine pm : affectedCapacity) {
 					// For every lost PM we buy a new one.
 					myProvidedService.registerHost(ExercisesBase.getNewPhysicalMachine(RandomUtils.nextDouble(2, 5)));
+					newPmCount++;
 				}
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
 		}
+	}
+
+	@Override
+	public void newVMadded(VirtualMachine[] vms) {
+		requestedVmsCount += vms.length;
+		vmRequestCount++;
 	}
 }
