@@ -111,4 +111,10 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 		}
 		return result;
 	}
+
+	@Override
+	public void setCostAnalyser(CostAnalyserandPricer analyser) {
+		// TODO Auto-generated method stub
+		
+	}
 }

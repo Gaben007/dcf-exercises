@@ -24,8 +24,10 @@
 package hu.unimiskolc.iit.distsys.interfaces;
 
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
+import hu.unimiskolc.iit.distsys.CostAnalyserandPricer;
 import hu.unimiskolc.iit.distsys.forwarders.IaaSForwarder;
 
 public interface CloudProvider extends IaaSForwarder.QuoteProvider {
 	void setIaaSService(IaaSService iaas);
+	void setCostAnalyser(CostAnalyserandPricer analyser);
 }

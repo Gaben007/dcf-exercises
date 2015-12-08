@@ -136,6 +136,7 @@ public class TestPricing implements MultiCloudUser.CompletionCallback {
 		ourAnalyser = new CostAnalyserandPricer(ourService);
 		CloudProvider ourselves = TestCreatorFactory.getNewProvider();
 		ourselves.setIaaSService(ourService);
+		ourselves.setCostAnalyser(ourAnalyser);
 		prepareIaaS(theCompetition);
 		competitionAnalyser = new CostAnalyserandPricer(theCompetition);
 		BuiltInCloudProvider competition = new BuiltInCloudProvider();

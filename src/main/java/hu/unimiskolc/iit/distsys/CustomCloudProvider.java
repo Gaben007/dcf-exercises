@@ -14,6 +14,7 @@ import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 
 public class CustomCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine>, IaaSForwarder.VMListener {
 	private IaaSService myProvidedService;
+	private CostAnalyserandPricer costAnalyser;
 	private static double basicPrice = 0.00002;
 	private static double requiredprofitRate = 1.0;
 	
@@ -51,7 +52,8 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 			successSeelcetionRate = 0.8;
 		else if (successSeelcetionRate > 1.0)
 			successSeelcetionRate = 1.0;
-			
+		
+		setBasicPriceByCostAnylser();
 		
 		double result = rc.getRequiredCPUs() * basicPrice * effectivenessBasedDiscount * procCountBasedDiscount * requiredprofitRate;// * successSeelcetionRate;
 		sumRequestResults += result / rc.getRequiredCPUs();
@@ -59,6 +61,13 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		return result;
 	}
 	
+	private void setBasicPriceByCostAnylser() {
+		if (costAnalyser == null || allRequest < 1000)
+			return;
+		
+		basicPrice = costAnalyser.getTotalCosts() / allProcessor;
+	}
+
 	private double getTotalCapacities(){
 		double result = 0;
 		for (PhysicalMachine pm : myProvidedService.machines) {
@@ -80,7 +89,7 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 			return 0.5;
 		
 		if (effectiveness < 0.10)
-			return 0.8;
+			return 0.9;
 		
 		if (effectiveness < 0.30)
 			return 0.9;
@@ -92,26 +101,26 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 			return 0.9;
 		
 		if (effectiveness > 0.90)
-			return 1.2;
+			return 1.1;
 		
 		if (effectiveness > 0.80)
-			return 1.1;
+			return 1.05;
 		
 		return 1.0;
 	}
 	
 	private double getProcCountBasedDiscount(double procCount) {
 		if (procCount > 30)
-			return 0.8;
-		
-		if (procCount > 10)
 			return 0.6;
 		
+		if (procCount > 10)
+			return 0.8;
+		
 		if (procCount > 5)
-			return 0.75;
+			return 0.85;
 		
 		if (procCount > 3)
-			return 0.85;
+			return 0.95;
 		
 		return 1.0;
 	}
@@ -144,5 +153,10 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 	public void newVMadded(VirtualMachine[] vms) {
 		requestedVmsCount += vms.length;
 		vmRequestCount++;
+	}
+
+	@Override
+	public void setCostAnalyser(CostAnalyserandPricer analyser) {
+		costAnalyser = analyser;
 	}
 }
