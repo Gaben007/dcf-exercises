@@ -23,6 +23,9 @@
 
 package hu.unimiskolc.iit.distsys.forwarders;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
+
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.IaaSService;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.VirtualMachine;
 import hu.mta.sztaki.lpds.cloud.simulator.iaas.constraints.ResourceConstraints;
@@ -31,9 +34,8 @@ import hu.mta.sztaki.lpds.cloud.simulator.iaas.vmscheduling.Scheduler;
 import hu.mta.sztaki.lpds.cloud.simulator.io.NetworkNode.NetworkException;
 import hu.mta.sztaki.lpds.cloud.simulator.io.Repository;
 import hu.mta.sztaki.lpds.cloud.simulator.io.VirtualAppliance;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
+import hu.mta.sztaki.lpds.cloud.simulator.notifications.SingleNotificationHandler;
+import hu.mta.sztaki.lpds.cloud.simulator.notifications.StateDependentEventHandler;
 
 public class IaaSForwarder extends IaaSService implements ForwardingRecorder {
 	public interface VMListener {
@@ -51,7 +53,13 @@ public class IaaSForwarder extends IaaSService implements ForwardingRecorder {
 	}
 
 	private boolean reqVMcalled = false;
-	private VMListener notifyMe = null;
+	private final StateDependentEventHandler<VMListener, VirtualMachine[]> notifyMe = new StateDependentEventHandler<VMListener, VirtualMachine[]>(
+			new SingleNotificationHandler<VMListener, VirtualMachine[]>() {
+				@Override
+				public void sendNotification(VMListener onObject, VirtualMachine[] payload) {
+					onObject.newVMadded(payload);
+				}
+			});
 	private QuoteProvider qp = new QuoteProvider() {
 		@Override
 		public double getPerTickQuote(ResourceConstraints rc) {
@@ -66,7 +74,7 @@ public class IaaSForwarder extends IaaSService implements ForwardingRecorder {
 	}
 
 	public void setVMListener(VMListener newListener) {
-		notifyMe = newListener;
+		notifyMe.subscribeToEvents(newListener);
 	}
 
 	public void setQuoteProvider(QuoteProvider qp) {
@@ -101,9 +109,7 @@ public class IaaSForwarder extends IaaSService implements ForwardingRecorder {
 	}
 
 	private VirtualMachine[] notifyVMListeners(VirtualMachine[] received) {
-		if (notifyMe != null) {
-			notifyMe.newVMadded(received);
-		}
+		notifyMe.notifyListeners(received);
 		return received;
 	}
 }

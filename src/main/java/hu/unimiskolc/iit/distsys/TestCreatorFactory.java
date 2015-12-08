@@ -51,4 +51,11 @@ public class TestCreatorFactory {
 				.newInstance();
 	}
 
+	public static CloudProvider getDefaultProvider()
+			throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+		String defaultProviderid = System.getProperty("hu.unimiskolc.iit.distsys.DefaultCloudProvider");
+		return defaultProviderid == null ? new BuiltInCloudProvider()
+				: (CloudProvider) Class.forName(defaultProviderid).newInstance();
+	}
+
 }
