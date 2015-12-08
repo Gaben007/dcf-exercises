@@ -15,8 +15,9 @@ import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 public class CustomCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine>, IaaSForwarder.VMListener {
 	private IaaSService myProvidedService;
 	private CostAnalyserandPricer costAnalyser;
-	private static double basicPrice = 0.00002;
-	private static double requiredprofitRate = 1.0;
+	private static double basicPrice = 0.00001;
+	private static double minRequiredprofitRate = 1.1;
+	private static double maxRequiredprofitRate = 1.3;
 	
 	public static double maxProcessor = 0;
 	public static double maxPower = 0;
@@ -48,24 +49,29 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		double effectivenessBasedDiscount = getEffectivenessBasedDiscount(effectiveness);
 		double procCountBasedDiscount = getProcCountBasedDiscount(rc.getRequiredCPUs());
 		double successSeelcetionRate = vmRequestCount / allRequest;
-		if (successSeelcetionRate < 0.8)
-			successSeelcetionRate = 0.8;
+		if (successSeelcetionRate < 0.6)
+			successSeelcetionRate = 0.6;
 		else if (successSeelcetionRate > 1.0)
 			successSeelcetionRate = 1.0;
 		
 		setBasicPriceByCostAnylser();
 		
-		double result = rc.getRequiredCPUs() * basicPrice * effectivenessBasedDiscount * procCountBasedDiscount * requiredprofitRate;// * successSeelcetionRate;
+		double result = rc.getRequiredCPUs() * basicPrice * effectivenessBasedDiscount * procCountBasedDiscount * successSeelcetionRate;
 		sumRequestResults += result / rc.getRequiredCPUs();
 		sumEffectiveness += effectiveness;
 		return result;
 	}
 	
 	private void setBasicPriceByCostAnylser() {
-		if (costAnalyser == null || allRequest < 1000)
+		if (costAnalyser == null || allRequest < 500)
 			return;
 		
-		basicPrice = costAnalyser.getTotalCosts() / allProcessor;
+		//double currentAssets = costAnalyser.getCurrentBalance() + costAnalyser.getTotalCosts() - costAnalyser.getTotalEarnings();
+		
+		if (costAnalyser.getTotalEarnings() / costAnalyser.getTotalCosts() > maxRequiredprofitRate)
+			basicPrice *= 0.99;
+		else if (costAnalyser.getTotalEarnings() / costAnalyser.getTotalCosts() < minRequiredprofitRate)
+			basicPrice = costAnalyser.getTotalCosts() / allProcessor;
 	}
 
 	private double getTotalCapacities(){
