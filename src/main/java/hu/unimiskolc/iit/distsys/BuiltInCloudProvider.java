@@ -54,7 +54,7 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 		myProvidedService = iaas;
 		myProvidedService.subscribeToCapacityChanges(this);
 		((IaaSForwarder) myProvidedService).setQuoteProvider(this);
-		//((IaaSForwarder) myProvidedService).setVMListener(this);
+		((IaaSForwarder) myProvidedService).setVMListener(this);
 	}
 
 	@Override
@@ -84,7 +84,7 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 		double effectiveness = 1 - (getFreeCapacities() / getTotalCapacities());
 		sumEffectiveness += effectiveness;
 		
-		double result = rc.getRequiredCPUs() * 0.000015;
+		double result = rc.getRequiredCPUs() * 0.000008;
 		//double result = 0.0002;
 		
 		sumRequestResults += result / rc.getRequiredCPUs();

@@ -130,7 +130,7 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		myProvidedService = iaas;
 		myProvidedService.subscribeToCapacityChanges(this);
 		((IaaSForwarder) myProvidedService).setQuoteProvider(this);
-		//((IaaSForwarder) myProvidedService).setVMListener(this);
+		((IaaSForwarder) myProvidedService).setVMListener(this);
 	}
 
 	@Override
