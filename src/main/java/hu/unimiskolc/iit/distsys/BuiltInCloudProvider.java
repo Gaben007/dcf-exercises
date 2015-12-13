@@ -84,7 +84,8 @@ public class BuiltInCloudProvider implements CloudProvider, VMManager.CapacityCh
 		double effectiveness = 1 - (getFreeCapacities() / getTotalCapacities());
 		sumEffectiveness += effectiveness;
 		
-		double result = rc.getRequiredCPUs() * 0.0000081;
+		double result = rc.getRequiredCPUs() * 0.0000000081;
+		//result = 0;
 		//double result = 0.0002;
 		
 		sumRequestResults += result / rc.getRequiredCPUs();

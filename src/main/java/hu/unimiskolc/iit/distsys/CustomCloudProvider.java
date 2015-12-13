@@ -15,9 +15,9 @@ import hu.unimiskolc.iit.distsys.interfaces.CloudProvider;
 public class CustomCloudProvider implements CloudProvider, VMManager.CapacityChangeEvent<PhysicalMachine>, IaaSForwarder.VMListener {
 	private IaaSService myProvidedService;
 	private CostAnalyserandPricer costAnalyser;
-	private static double basicPrice = 0.00001;
+	private static double basicPrice = 0;
 	private static double minRequiredprofitRate = 1.1;
-	private static double maxRequiredprofitRate = 1.3;
+	private static double maxRequiredprofitRate = 1.4;
 	
 	public static double maxProcessor = 0;
 	public static double maxPower = 0;
@@ -62,14 +62,21 @@ public class CustomCloudProvider implements CloudProvider, VMManager.CapacityCha
 		return result;
 	}
 	
+	private int waitingCounter = 0;
 	private void setBasicPriceByCostAnylser() {
 		if (costAnalyser == null || allRequest < 500)
 			return;
 		
+		waitingCounter++;
+		if (waitingCounter < 100)
+			return;
+		
+		waitingCounter = 0;
+		
 		//double currentAssets = costAnalyser.getCurrentBalance() + costAnalyser.getTotalCosts() - costAnalyser.getTotalEarnings();
 		
 		if (costAnalyser.getTotalEarnings() / costAnalyser.getTotalCosts() > maxRequiredprofitRate)
-			basicPrice *= 0.99;
+			basicPrice *= 0.9;
 		else if (costAnalyser.getTotalEarnings() / costAnalyser.getTotalCosts() < minRequiredprofitRate)
 			basicPrice = costAnalyser.getTotalCosts() / allProcessor;
 	}
